@@ -177,6 +177,26 @@ Open anomaly rows are summarised as human-readable `anomaly_status` values such 
 
 Anomalies are review items, not official penalties or confirmed wrongdoing. They must remain visible where they affect interpretation.
 
+## CI reproducibility gate
+
+The static validation workflow exercises the generator on pull requests:
+
+```bash
+python tools/generate_team_report_cards.py --dry-run
+python tools/generate_team_report_cards.py
+python tools/validate_static_data.py
+python tools/validate_static_app.py
+git diff --exit-code -- data/team_report_cards.json data/team_report_cards_validation.json
+```
+
+This proves three separate things:
+
+1. the generator starts and can inspect the prepared inputs;
+2. the generated files satisfy the static data and app contracts;
+3. the generated files reproduce the committed report-card JSON exactly.
+
+A failure in the final `git diff --exit-code` step means the generator is executable and may produce valid JSON, but it has not yet been proven to reproduce the committed data mart. Do not approve a generator-change PR until that difference is either fixed or intentionally reviewed and committed.
+
 ## Validation summary
 
 `data/team_report_cards_validation.json` includes:
@@ -214,3 +234,4 @@ Before approving a regeneration PR:
    - a known incident team such as Ostrov Team
 6. Confirm official positions and lap totals did not change unexpectedly.
 7. Confirm RaceIQ scores, grades and confidence are described as explanatory.
+8. Confirm CI proves the generator reproduces the committed report-card outputs, or that any generated-data diff has been intentionally reviewed and committed.
