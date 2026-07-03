@@ -121,13 +121,30 @@
       : '<p class="small">No summary bullets available.</p>';
   }
 
+  function renderTextList(items, empty) {
+    const list = Array.isArray(items) ? items.filter(Boolean) : [];
+    return list.length
+      ? `<ul class="report-bullets compact">${list.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
+      : `<p class="small">${escapeHtml(empty)}</p>`;
+  }
+
   function renderCaveats(team) {
-    const caveats = [];
-    caveats.push(`Confidence: ${confidenceLabel(team)}`);
-    if (team.anomaly_status && team.anomaly_status !== 'none') caveats.push(`Anomalies: ${team.anomaly_status}`);
-    if (team.known_incident_status && team.known_incident_status !== 'none') caveats.push(`Known incident: ${team.known_incident_status}`);
-    caveats.push('RaceIQ scores are explanatory story signals, not official race results.');
-    return `<div class="notice"><strong>Caveats.</strong> ${escapeHtml(caveats.join(' · '))}</div>`;
+    return `<div class="notice confidence-panel">
+      <div class="confidence-panel-head">
+        <strong>Confidence: ${escapeHtml(confidenceLabel(team))}</strong>
+        ${badge(confidenceLabel(team), confidenceClass(confidenceLabel(team)))}
+      </div>
+      <div class="grid cols-2">
+        <div>
+          <h3>Confidence reasons</h3>
+          ${renderTextList(team.confidence_reasons, 'No confidence reasons supplied.')}
+        </div>
+        <div>
+          <h3>Interpretation caveats</h3>
+          ${renderTextList(team.interpretation_caveats, 'No interpretation caveats supplied.')}
+        </div>
+      </div>
+    </div>`;
   }
 
   function renderTeamDetail(team) {
@@ -172,7 +189,7 @@
           <div class="detail-box"><strong>Consistency</strong><p>${fmt(team.consistency_score, 1)}/100</p></div>
           <div class="detail-box"><strong>Best phase</strong><p>${escapeHtml(team.best_phase || '—')}</p></div>
           <div class="detail-box"><strong>Key battle</strong><p>${escapeHtml(team.key_battle || '—')}</p></div>
-          <div class="detail-box"><strong>Confidence</strong><p>${escapeHtml(confidence)} · use alongside caveats and known incidents</p></div>
+          <div class="detail-box"><strong>Confidence</strong><p>${escapeHtml(confidence)} · see reasons and caveats in the race story panel</p></div>
         </div>
       </div>
     </div>`;
