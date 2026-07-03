@@ -39,13 +39,11 @@ data/appdata.part*.txt
 
 ## Deploy on GitHub Pages
 
-Use repository root as the Pages source:
+This repository includes a GitHub Actions workflow at `.github/workflows/pages.yml`.
 
-1. Go to **Settings → Pages**.
-2. Select **Deploy from a branch**.
-3. Select branch `main`.
-4. Select folder `/root`.
-5. Save.
+In GitHub Pages settings, select **Build and deployment → Source → GitHub Actions**.
+
+Each push to `main` will publish the repository root to GitHub Pages.
 
 ## Deploy on Netlify
 
