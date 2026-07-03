@@ -15,6 +15,16 @@ The project is for post-race analysis only. Do not add live polling, scraping, P
 - Treat merge to `main` as a deployment trigger.
 - Do not commit directly to `main` unless explicitly asked for a hotfix.
 
+## Pre-branch issue intake
+
+Before starting work on an issue, inspect the issue for enough implementation detail.
+
+A ready issue should include goal, scope, non-goals, inputs, expected outputs, acceptance criteria, validation expectations and analytics caveats where relevant.
+
+If the issue is unclear, hold implementation. Do not create a branch or make changes. Post an issue comment explaining what is missing and what clarification is needed.
+
+If the issue is ready, post an implementation plan comment before creating the feature branch. The plan should list the files expected to change, implementation steps, data or UI contract, validation plan, scope controls, risks and proposed branch name.
+
 ## Current iteration context
 
 The Report Cards feature is split across linked issues:

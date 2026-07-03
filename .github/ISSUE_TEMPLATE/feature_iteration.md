@@ -80,6 +80,29 @@ body:
       placeholder: First Observed is not true grid. Scores are explanatory, not official. Known incidents remain visible.
     validations:
       required: true
+  - type: textarea
+    id: implementation-plan
+    attributes:
+      label: Implementation plan expectations
+      description: What should the pre-branch implementation plan comment cover?
+      placeholder: Expected files, implementation steps, validation plan, scope controls, risks and proposed branch.
+    validations:
+      required: false
+  - type: checkboxes
+    id: pre-branch-readiness
+    attributes:
+      label: Pre-branch readiness
+      options:
+        - label: Issue has enough detail for implementation
+          required: true
+        - label: Data or UI contract is clear where relevant
+          required: true
+        - label: Validation expectations are clear
+          required: true
+        - label: Assistant/Codex should post an issue readiness comment before branch creation
+          required: true
+        - label: Assistant/Codex should post an implementation plan comment before branch creation
+          required: true
   - type: checkboxes
     id: readiness
     attributes:
