@@ -1,0 +1,32 @@
+name: Validate static data
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-static-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Parse core JSON files
+        run: |
+          python -m json.tool data/grid_to_finish.json > /dev/null
+          python -m json.tool data/grid_to_finish_validation.json > /dev/null
+          if [ -f data/team_report_cards.json ]; then python -m json.tool data/team_report_cards.json > /dev/null; fi
+          if [ -f data/team_report_cards_validation.json ]; then python -m json.tool data/team_report_cards_validation.json > /dev/null; fi
+
+      - name: Run RaceIQ static data validator
+        run: python tools/validate_static_data.py
