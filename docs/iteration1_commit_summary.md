@@ -18,3 +18,5 @@ Validation summary:
 - Duplicate heat sheet car numbers: none
 - Duplicate heat sheet transponders: none
 - Validation status: pass
+
+Note: no dashboard UI changes are included in this iteration.
