@@ -61,6 +61,21 @@ Memories are a helpful recall layer for stable preferences, workflow habits and 
 
 Do not store secrets, transient PR status, temporary branch heads or commit SHAs in memory.
 
+## Pre-approval groundedness review
+
+Before the user approves a PR, provide a top-level PR comment titled `Pre-approval groundedness review`.
+
+The review must check:
+
+- issue alignment: did the PR deliver what the linked issue asked for?
+- scope control: did the PR avoid unrelated or unrequested changes?
+- validation evidence: what has been completed and what is still missing?
+- analytics truth: are official results, inferred analytics, caveats and scores represented honestly?
+- risks and caveats: what should the reviewer know before approval?
+- final recommendation: `Approve`, `Approve after minor fixes`, or `Do not approve yet`
+
+Do not recommend approval if validation is incomplete, scope has drifted, or analytics caveats are hidden or overstated.
+
 ## Validation checklist
 
 Before opening or updating a PR, check:
