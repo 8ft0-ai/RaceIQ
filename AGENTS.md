@@ -53,6 +53,14 @@ Avoid dependencies, build steps and package managers unless a future issue expli
 - Keep visual language consistent with the existing dashboard.
 - Avoid large rewrites when a small additive change will do.
 
+## Codex memories
+
+Use `docs/CODEX_MEMORIES.md` as the curated memory seed for this project.
+
+Memories are a helpful recall layer for stable preferences, workflow habits and known pitfalls, but they are not the source of mandatory project rules. Required rules stay in `AGENTS.md` and checked-in documentation.
+
+Do not store secrets, transient PR status, temporary branch heads or commit SHAs in memory.
+
 ## Validation checklist
 
 Before opening or updating a PR, check:

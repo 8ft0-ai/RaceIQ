@@ -32,6 +32,12 @@ RaceIQ PRs should be reviewed for both software correctness and analytics trustw
 - Does it avoid adding dependencies, build tools, live collection or backend behaviour?
 - Are docs updated when data contracts or interpretation rules change?
 
+### Codex memory hygiene
+
+- If the PR changes durable workflow or project context, should `docs/CODEX_MEMORIES.md` be updated?
+- Does the PR avoid putting secrets, transient PR status, branch heads or commit SHAs into memory guidance?
+- Does mandatory guidance remain in `AGENTS.md` or checked-in docs rather than only in memory wording?
+
 ## PR summary format
 
 Use this structure in PR descriptions:
