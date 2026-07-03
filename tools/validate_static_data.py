@@ -50,6 +50,8 @@ TEAM_REPORT_CARD_REQUIRED_FIELDS = [
     "summary_bullets",
 ]
 
+ALLOWED_CONFIDENCE_VALUES = {"high", "medium", "usable_with_context", "low"}
+
 GRID_REQUIRED_FIELDS = [
     "team_name",
     "car_no",
@@ -105,6 +107,10 @@ def validate_grid_to_finish() -> None:
             row.get("places_gained_from_first_observed") == row.get("first_observed_position") - row.get("final_position"),
             f"First-observed movement mismatch for {row.get('team_name')}",
         )
+        require(
+            row.get("data_confidence") in ALLOWED_CONFIDENCE_VALUES,
+            f"Invalid grid data_confidence for {row.get('team_name')}: {row.get('data_confidence')}",
+        )
 
 
 def validate_team_report_cards() -> None:
@@ -130,6 +136,12 @@ def validate_team_report_cards() -> None:
         require(row.get("report_card_grade") in {"A+", "A", "B", "C", "D", "E"}, f"Invalid grade for {row.get('team_name')}")
         require(isinstance(row.get("summary_bullets"), list), f"summary_bullets must be a list for {row.get('team_name')}")
         require("places_gained" in row and "places_gained_from_first_observed" in row, "Grid and first-observed movement must remain separate")
+
+        if "data_confidence" in row:
+            require(
+                row.get("data_confidence") in ALLOWED_CONFIDENCE_VALUES,
+                f"Invalid report-card data_confidence for {row.get('team_name')}: {row.get('data_confidence')}",
+            )
 
 
 def main() -> int:
