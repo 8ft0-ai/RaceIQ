@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   validate-static-data:
@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -34,27 +36,24 @@ jobs:
       - name: Generate Team Report Card outputs
         run: python tools/generate_team_report_cards.py
 
+      - name: Commit generated Team Report Card outputs
+        if: github.event_name == 'pull_request'
+        run: |
+          if ! git diff --quiet -- data/team_report_cards.json data/team_report_cards_validation.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/team_report_cards.json data/team_report_cards_validation.json
+            git commit -m "Regenerate Team Report Card outputs"
+            git push
+          else
+            echo "Generated Team Report Card outputs already match committed files."
+          fi
+
       - name: Validate generated static data
         run: python tools/validate_static_data.py
 
       - name: Run RaceIQ static app smoke validator
         run: python tools/validate_static_app.py
-
-      - name: Capture Team Report Card generator diff
-        if: always()
-        run: |
-          git diff --stat -- data/team_report_cards.json data/team_report_cards_validation.json | tee report-card-generator.diffstat
-          git diff -- data/team_report_cards.json data/team_report_cards_validation.json > report-card-generator.diff || true
-
-      - name: Upload Team Report Card generator diff
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: report-card-generator-diff
-          path: |
-            report-card-generator.diffstat
-            report-card-generator.diff
-          if-no-files-found: ignore
 
       - name: Verify Team Report Card generator reproduces committed output
         run: git diff --exit-code -- data/team_report_cards.json data/team_report_cards_validation.json
