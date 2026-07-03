@@ -1,7 +1,8 @@
 (() => {
   const DATA_FILES = {
     gridToFinish: 'data/grid_to_finish.json',
-    gridValidation: 'data/grid_to_finish_validation.json'
+    gridValidation: 'data/grid_to_finish_validation.json',
+    teamReportCards: 'data/team_report_cards.json'
   };
 
   const $ = (id) => document.getElementById(id);
@@ -29,6 +30,21 @@
     if (n > 0) return 'up';
     if (n < 0) return 'down';
     return 'neutral';
+  }
+
+  function scoreClass(score) {
+    const n = Number(score);
+    if (!Number.isFinite(n)) return 'neutral';
+    if (n >= 80) return 'good';
+    if (n >= 55) return 'warn';
+    return 'bad';
+  }
+
+  function gradeClass(grade) {
+    const g = String(grade || '').toUpperCase();
+    if (g === 'A+' || g === 'A' || g === 'B') return 'good';
+    if (g === 'C' || g === 'D') return 'warn';
+    return 'bad';
   }
 
   function movementBadge(value, label = '') {
@@ -65,7 +81,7 @@
   }
 
   async function loadReportCardData() {
-    const [gridToFinish, gridValidation] = await Promise.all([
+    const [gridToFinish, gridValidation, teamReportCards] = await Promise.all([
       fetch(DATA_FILES.gridToFinish).then(r => {
         if (!r.ok) throw new Error(`${DATA_FILES.gridToFinish}: ${r.status}`);
         return r.json();
@@ -73,15 +89,154 @@
       fetch(DATA_FILES.gridValidation).then(r => {
         if (!r.ok) throw new Error(`${DATA_FILES.gridValidation}: ${r.status}`);
         return r.json();
+      }),
+      fetch(DATA_FILES.teamReportCards).then(r => {
+        if (!r.ok) throw new Error(`${DATA_FILES.teamReportCards}: ${r.status}`);
+        return r.json();
       })
     ]);
-    return { gridToFinish, gridValidation };
+    return { gridToFinish, gridValidation, teamReportCards };
   }
 
-  function renderReportCards(gridToFinish, gridValidation) {
-    const panel = $('reportCards');
-    if (!panel) return;
+  function teamOptionLabel(team) {
+    return `${team.final_position}. ${team.team_name} · ${team.report_card_grade || '—'} · ${fmt(team.report_card_score, 1)}`;
+  }
 
+  function renderSummaryBullets(team) {
+    const bullets = Array.isArray(team.summary_bullets) ? team.summary_bullets : [];
+    return bullets.length
+      ? `<ul class="report-bullets">${bullets.map(b => `<li>${escapeHtml(b)}</li>`).join('')}</ul>`
+      : '<p class="small">No summary bullets available.</p>';
+  }
+
+  function renderCaveats(team) {
+    const caveats = [];
+    if (team.anomaly_status && team.anomaly_status !== 'none') caveats.push(`Anomalies: ${team.anomaly_status}`);
+    if (team.known_incident_status && team.known_incident_status !== 'none') caveats.push(`Known incident: ${team.known_incident_status}`);
+    caveats.push('RaceIQ scores are explanatory, not official results.');
+    return `<div class="notice"><strong>Caveats.</strong> ${escapeHtml(caveats.join(' · '))}</div>`;
+  }
+
+  function renderTeamDetail(team) {
+    if (!team) return '<div class="notice"><p>Select a team to view its report card.</p></div>';
+    return `<div class="card report-card-detail">
+      <div class="report-card-hero">
+        <div>
+          <div class="eyebrow">Selected team report card</div>
+          <h2>${escapeHtml(team.team_name)}</h2>
+          <p>${escapeHtml(team.headline || 'No headline available.')}</p>
+          <div class="controls">
+            ${badge(`Grade ${team.report_card_grade || '—'}`, gradeClass(team.report_card_grade))}
+            ${badge(`RaceIQ ${fmt(team.report_card_score, 1)}/100`, scoreClass(team.report_card_score))}
+            ${badge(`Final P${fmt(team.final_position, 0)}`)}
+            ${badge(`${fmt(team.final_laps, 0)} laps`)}
+          </div>
+        </div>
+        <div class="grade-tile ${gradeClass(team.report_card_grade)}">
+          <div class="grade-value">${escapeHtml(team.report_card_grade || '—')}</div>
+          <div class="metric-label">RaceIQ grade</div>
+          <div class="grade-score">${fmt(team.report_card_score, 1)}/100</div>
+        </div>
+      </div>
+      <div class="kpi-row report-kpis">
+        ${kpi('Finish', `P${fmt(team.final_position, 0)}`, `${fmt(team.final_laps, 0)} laps`)}
+        ${kpi('Grid start', team.start_position ? `P${fmt(team.start_position, 0)}` : '—')}
+        ${kpi('First observed', team.first_observed_position ? `P${fmt(team.first_observed_position, 0)}` : '—')}
+        ${kpi('Grid movement', signed(team.places_gained), 'Grid → Finish')}
+        ${kpi('Observed movement', signed(team.places_gained_from_first_observed), 'First observed → Finish')}
+        ${kpi('Delay burden', fmt(team.estimated_laps_lost, 1), team.delay_profile || '—')}
+      </div>
+      <div class="grid cols-2">
+        <div>
+          <h3>Race story</h3>
+          ${renderSummaryBullets(team)}
+          ${renderCaveats(team)}
+        </div>
+        <div class="report-facts">
+          <div class="detail-box"><strong>Pace profile</strong><p>${escapeHtml(team.pace_label || '—')} · ${fmt(team.median_clean_lph, 1)} clean lph</p></div>
+          <div class="detail-box"><strong>Consistency</strong><p>${fmt(team.consistency_score, 1)}/100</p></div>
+          <div class="detail-box"><strong>Best phase</strong><p>${escapeHtml(team.best_phase || '—')}</p></div>
+          <div class="detail-box"><strong>Key battle</strong><p>${escapeHtml(team.key_battle || '—')}</p></div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function renderTeamReportCards(teamReportCards) {
+    const teams = (teamReportCards || []).slice().sort((a, b) => Number(a.final_position) - Number(b.final_position));
+    if (!teams.length) return '<div class="notice"><p>No team report cards available.</p></div>';
+
+    const bestScore = teams.slice().sort((a,b)=>Number(b.report_card_score || 0)-Number(a.report_card_score || 0))[0];
+    const winner = teams.find(t => Number(t.final_position) === 1) || teams[0];
+    const bestRecovery = teams.slice().sort((a,b)=>Number(b.places_gained || 0)-Number(a.places_gained || 0))[0];
+    const caveatedTeams = teams.filter(t => (t.known_incident_status && t.known_incident_status !== 'none') || (t.anomaly_status && t.anomaly_status !== 'none')).length;
+    const avgScore = teams.reduce((sum, t) => sum + (Number(t.report_card_score) || 0), 0) / Math.max(teams.length, 1);
+
+    return `
+      <div class="section-header">
+        <div>
+          <h2>Team Report Cards</h2>
+          <p>Each card combines finish result, grid movement, pace, consistency, inferred delay burden, battles, anomalies and known incidents into an explanatory post-race profile.</p>
+        </div>
+        <select id="teamReportSelect" aria-label="Select team report card">
+          ${teams.map(t => `<option value="${escapeHtml(t.car_no)}">${escapeHtml(teamOptionLabel(t))}</option>`).join('')}
+        </select>
+      </div>
+      <div class="notice"><strong>Interpretation note.</strong> RaceIQ scores and grades are explanatory storytelling aids, not official race rankings. Caveats remain visible where anomalies or known incidents affect interpretation.</div>
+      <div class="kpi-row">
+        ${kpi('Highest RaceIQ', bestScore ? `${bestScore.team_name} ${fmt(bestScore.report_card_score, 1)}` : '—')}
+        ${kpi('Winner', winner ? winner.team_name : '—', winner ? `Grade ${winner.report_card_grade || '—'}` : '')}
+        ${kpi('Best grid recovery', bestRecovery ? `${bestRecovery.team_name} ${signed(bestRecovery.places_gained)}` : '—')}
+        ${kpi('Cards', teams.length)}
+        ${kpi('Average score', fmt(avgScore, 1))}
+        ${kpi('With caveats', caveatedTeams)}
+      </div>
+      <div class="grid cols-3 team-report-grid">
+        ${teams.slice(0, 6).map(t => `<button class="card team-report-card" data-car="${escapeHtml(t.car_no)}">
+          <div class="team-report-card-head">
+            <span class="rank">P${fmt(t.final_position, 0)}</span>
+            <span class="grade-mini ${gradeClass(t.report_card_grade)}">${escapeHtml(t.report_card_grade || '—')}</span>
+          </div>
+          <h3>${escapeHtml(t.team_name)}</h3>
+          <p>${escapeHtml(t.headline || '')}</p>
+          <div class="controls">
+            ${badge(`Score ${fmt(t.report_card_score, 1)}`, scoreClass(t.report_card_score))}
+            ${badge(`Grid ${signed(t.places_gained)}`, movementClass(t.places_gained) === 'up' ? 'good' : movementClass(t.places_gained) === 'down' ? 'bad' : '')}
+          </div>
+        </button>`).join('')}
+      </div>
+      <div class="section-header"><div><h2>Selected team</h2><p>Use the selector or highlight cards to inspect a team’s full post-race profile.</p></div></div>
+      <div id="teamReportDetail"></div>
+    `;
+  }
+
+  function attachTeamReportInteractions(teamReportCards) {
+    const teams = teamReportCards || [];
+    const select = $('teamReportSelect');
+    const detail = $('teamReportDetail');
+    if (!select || !detail || !teams.length) return;
+
+    const bestScore = teams.slice().sort((a,b)=>Number(b.report_card_score || 0)-Number(a.report_card_score || 0))[0];
+    const initial = bestScore || teams.find(t => Number(t.final_position) === 1) || teams[0];
+
+    const render = (carNo) => {
+      const team = teams.find(t => String(t.car_no) === String(carNo)) || initial;
+      if (!team) return;
+      select.value = String(team.car_no);
+      detail.innerHTML = renderTeamDetail(team);
+      document.querySelectorAll('.team-report-card').forEach(card => {
+        card.classList.toggle('selected', String(card.dataset.car) === String(team.car_no));
+      });
+    };
+
+    select.addEventListener('change', () => render(select.value));
+    document.querySelectorAll('.team-report-card').forEach(card => {
+      card.addEventListener('click', () => render(card.dataset.car));
+    });
+    render(initial.car_no);
+  }
+
+  function renderGridToFinish(gridToFinish, gridValidation) {
     const rows = gridToFinish || [];
     const validation = gridValidation || {};
     const byGridMovement = rows.filter(r => typeof r.places_gained_from_grid === 'number');
@@ -100,7 +255,7 @@
       .slice()
       .sort((a,b)=>b.places_gained_from_grid-a.places_gained_from_grid)[0];
 
-    panel.innerHTML = `
+    return `
       <div class="section-header">
         <div>
           <h2>Grid-to-Finish</h2>
@@ -141,16 +296,26 @@
       ])}`;
   }
 
+  function renderReportCards(gridToFinish, gridValidation, teamReportCards) {
+    const panel = $('reportCards');
+    if (!panel) return;
+    panel.innerHTML = `
+      ${renderTeamReportCards(teamReportCards)}
+      ${renderGridToFinish(gridToFinish, gridValidation)}
+    `;
+    attachTeamReportInteractions(teamReportCards);
+  }
+
   async function initReportCards() {
     const panel = $('reportCards');
     if (!panel) return;
-    panel.innerHTML = '<div class="notice"><p>Loading Grid-to-Finish analytics…</p></div>';
+    panel.innerHTML = '<div class="notice"><p>Loading report card analytics…</p></div>';
     try {
-      const { gridToFinish, gridValidation } = await loadReportCardData();
-      renderReportCards(gridToFinish, gridValidation);
+      const { gridToFinish, gridValidation, teamReportCards } = await loadReportCardData();
+      renderReportCards(gridToFinish, gridValidation, teamReportCards);
     } catch (err) {
       console.error(err);
-      panel.innerHTML = `<div class="notice danger"><h2>Could not load Grid-to-Finish data</h2><p>${escapeHtml(err.message)}</p></div>`;
+      panel.innerHTML = `<div class="notice danger"><h2>Could not load report card data</h2><p>${escapeHtml(err.message)}</p></div>`;
     }
   }
 
