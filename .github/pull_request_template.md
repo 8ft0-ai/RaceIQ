@@ -37,6 +37,13 @@ Closes #
 - [ ] The PR is small enough to review confidently
 - [ ] Draft status can be removed
 
+## Pre-approval groundedness review
+
+- [ ] Assistant/Codex has posted a pre-approval groundedness review comment
+- [ ] The review checks issue alignment, scope control, validation evidence, analytics truth and risks/caveats
+- [ ] The review includes one final recommendation: `Approve`, `Approve after minor fixes`, or `Do not approve yet`
+- [ ] Any `Do not approve yet` or minor-fix items are resolved or explicitly accepted before approval
+
 ## Merge / deployment gate
 
 - [ ] PR has been approved

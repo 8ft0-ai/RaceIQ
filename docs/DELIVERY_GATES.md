@@ -2,7 +2,7 @@
 
 This document describes the lightweight delivery gates for the RaceIQ issue-to-PR workflow.
 
-The ideas behind these gates are recorded in #11. The first implementation is tracked in #12.
+The ideas behind these gates are recorded in #11. The first implementation is tracked in #12. The pre-approval groundedness review gate is tracked in #15.
 
 ## Principles
 
@@ -22,6 +22,7 @@ Branch control = naming convention
 Work visibility = draft PR
 Mechanical validation = GitHub Actions
 Review quality = PR checklist
+Pre-approval confidence = groundedness review comment
 Deployment safety = protected main branch
 Post-merge confidence = release check comment
 ```
@@ -136,6 +137,86 @@ A PR should only be marked ready for review when:
 - unrelated changes are excluded
 - the PR is small enough to review confidently
 
+## Gate 7.5 — Pre-approval groundedness review
+
+Before the user approves a PR, Assistant/Codex should post a top-level PR comment that answers two questions:
+
+1. Did we do what was needed?
+2. Did we only do what was asked?
+
+This gate is different from validation. Validation checks whether the implementation works. The groundedness review checks whether the PR is grounded in the issue, stays within scope and has a clear recommendation.
+
+Use this structure:
+
+```markdown
+## Pre-approval groundedness review
+
+### 1. Issue alignment
+
+Linked issue: #...
+
+The issue asked for:
+
+- ...
+
+This PR delivers:
+
+- ...
+
+### 2. Scope check
+
+In scope:
+
+- ...
+
+Out of scope / deliberately not included:
+
+- ...
+
+Unrequested changes found:
+
+- None / list items
+
+### 3. Validation evidence
+
+Completed:
+
+- ...
+
+Still not completed:
+
+- ...
+
+### 4. Analytics truth check
+
+- Official results remain separate from inferred analytics: Yes/No
+- First Observed is not presented as true grid: Yes/No
+- Known incidents remain visible as caveats: Yes/No
+- Scores/grades are labelled as explanatory, not official: Yes/No
+
+### 5. Risks / caveats
+
+- ...
+
+### 6. Final recommendation
+
+Recommendation: Approve / Approve after minor fixes / Do not approve yet
+
+Reason:
+
+- ...
+```
+
+The final recommendation must use one of:
+
+```text
+Approve
+Approve after minor fixes
+Do not approve yet
+```
+
+The user should not approve the PR until this groundedness review comment is present and any `Do not approve yet` items have been resolved or explicitly accepted.
+
 ## Gate 8 — Merge
 
 Before merge:
@@ -161,7 +242,7 @@ After merge:
 ## Roles
 
 ```text
-Assistant / Codex: prepares issue, branch, PR, validation evidence
+Assistant / Codex: prepares issue, branch, PR, validation evidence and groundedness review
 GitHub Actions: enforces mechanical checks
 Reviewer / user: approves judgement gates and merge
 GitHub branch protection: prevents bypassing the process
@@ -178,8 +259,9 @@ gate:data-contract-approved
 gate:in-progress
 gate:ready-for-pr
 gate:ready-for-review
+gate:groundedness-reviewed
 gate:approved
 gate:merged
 ```
 
-These labels are optional. The core controls are the issue template, branch naming convention, draft PRs, validation workflow and PR checklist.
+These labels are optional. The core controls are the issue template, branch naming convention, draft PRs, validation workflow, PR checklist and pre-approval groundedness review comment.
