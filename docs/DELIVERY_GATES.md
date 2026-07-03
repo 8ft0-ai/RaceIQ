@@ -2,7 +2,7 @@
 
 This document describes the lightweight delivery gates for the RaceIQ issue-to-PR workflow.
 
-The ideas behind these gates are recorded in #11. The first implementation is tracked in #12. The pre-approval groundedness review gate is tracked in #15. The pre-branch issue intake gates are tracked in #17.
+The ideas behind these gates are recorded in #11. The first implementation is tracked in #12. The pre-approval groundedness review gate is tracked in #15. The pre-branch issue intake gates are tracked in #17. The draft PR browser-validation fallback is tracked in #34.
 
 ## Principles
 
@@ -226,6 +226,28 @@ A good draft PR states:
 
 Draft means visible, not ready to merge.
 
+### Draft PR fallback for browser-validation blockers
+
+Implementation blockers and validation blockers are different.
+
+If Assistant/ChatGPT can complete and commit the scoped implementation, but local browser validation is unavailable in its environment, it may still open a draft PR when all of the following are true:
+
+- the branch is complete
+- the diff is small and reviewable
+- available non-browser validation is clean
+- there are no known failing checks
+- analytics truth, scoring, data correctness and caveat wording are not uncertain
+
+The draft PR must clearly record the browser validation as pending and state what Codex or a local reviewer still needs to check before the PR is marked ready for review.
+
+Suggested wording:
+
+```text
+Browser smoke is pending Codex validation because ChatGPT could not access localhost or narrow-viewport browser testing in this environment.
+```
+
+Do not use this fallback to bypass validation failures or uncertainty. Stop before opening a PR if the implementation is incomplete, the change is visually risky, generated data needs local scripting, files cannot be committed cleanly, or the PR would be misleading without completed validation.
+
 ## Gate 5 — Validation
 
 Before a PR is marked ready for review, run the relevant validation.
@@ -250,6 +272,8 @@ Then check:
 - browser console is clean
 - data caveats are visible
 
+If browser validation is pending from a draft PR fallback, leave the browser-dependent checklist items unchecked until Codex or a local reviewer completes them.
+
 The workflow `.github/workflows/validate-static-data.yml` runs the static data validator on pull requests into `main`.
 
 ## Gate 6 — Analytics truth
@@ -273,6 +297,8 @@ A PR should only be marked ready for review when:
 - known caveats are documented
 - unrelated changes are excluded
 - the PR is small enough to review confidently
+
+A draft PR with pending browser validation must not be marked ready for review until that validation is complete or the reviewer explicitly accepts the remaining gap.
 
 ## Gate 7.5 — Pre-approval groundedness review
 

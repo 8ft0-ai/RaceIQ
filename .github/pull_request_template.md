@@ -22,6 +22,12 @@ Closes #
 - [ ] New/changed JSON paths load correctly
 - [ ] Data caveats are visible where needed
 
+Browser validation status: Completed / Pending local or Codex smoke / Not required
+
+Pending browser validation note, if applicable:
+
+- 
+
 ## Analytics truth check
 
 - [ ] Official results remain separate from inferred analytics

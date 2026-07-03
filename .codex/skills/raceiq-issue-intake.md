@@ -48,6 +48,8 @@ The plan should include:
 - risks and caveats
 - proposed branch name
 
+When validation includes local browser checks, distinguish implementation blockers from validation blockers. A missing local browser smoke capability does not have to block a draft PR if the scoped implementation is complete, available non-browser validation is clean, and pending browser checks are recorded clearly.
+
 ## Step 4 — Create the branch
 
 Create the feature branch only after both comments exist.
@@ -58,6 +60,20 @@ Use:
 feature/<issue-number>-short-description
 ```
 
+## Step 5 — Draft PR fallback for unavailable browser validation
+
+If local browser validation is required but unavailable, a draft PR may still be opened when:
+
+- the branch is complete
+- files were committed cleanly
+- available validation is not failing
+- the diff is small and reviewable
+- analytics truth, data correctness, scoring and caveat wording are not uncertain
+
+The draft PR must leave browser-dependent validation unchecked, state the browser smoke still needed, and remain in draft until Codex or a local reviewer completes that validation.
+
+Do not open a PR if implementation is incomplete, validation is known to fail, the change is visually risky, generated data needs local scripting, or the PR would be misleading without the missing validation.
+
 ## Done when
 
-The issue has either been held for clarification or has both a readiness comment and an implementation plan comment before branch creation.
+The issue has either been held for clarification or has both a readiness comment and an implementation plan comment before branch creation. If a draft PR is opened with browser validation pending, the PR clearly records the pending local smoke check and remains draft.
