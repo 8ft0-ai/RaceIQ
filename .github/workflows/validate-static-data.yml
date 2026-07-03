@@ -28,6 +28,14 @@ jobs:
           if [ -f data/team_report_cards.json ]; then python -m json.tool data/team_report_cards.json > /dev/null; fi
           if [ -f data/team_report_cards_validation.json ]; then python -m json.tool data/team_report_cards_validation.json > /dev/null; fi
 
+      - name: Run Team Report Card generator dry run
+        run: python tools/generate_team_report_cards.py --dry-run
+
+      - name: Verify Team Report Card generator reproduces committed output
+        run: |
+          python tools/generate_team_report_cards.py
+          git diff --exit-code -- data/team_report_cards.json data/team_report_cards_validation.json
+
       - name: Run RaceIQ static data validator
         run: python tools/validate_static_data.py
 
