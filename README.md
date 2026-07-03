@@ -2,11 +2,11 @@
 
 RaceIQ is a portable static race intelligence dashboard generated from captured LiveRC timing data.
 
-It turns leaderboard snapshots into a coverage-aware race review covering final standings, replay timeline, team pace, pit and delay events, head-to-head battles, anomaly review and method notes.
+This repository has been initialised for the RaceIQ app. The generated static app package should be unpacked into the repository root so that `index.html`, `app.js`, `styles.css` and the static data assets are all served from the same base path.
 
-## Run locally
+## Local run
 
-Most browsers block `fetch()` from local `file://` pages, so run a tiny local server from this folder:
+Most browsers block `fetch()` from local `file://` pages, so run a tiny local server from the app folder:
 
 ```bash
 python -m http.server 8000
@@ -18,7 +18,7 @@ Then open:
 http://localhost:8000
 ```
 
-## Repository layout
+## Expected repository layout
 
 ```text
 index.html
@@ -27,11 +27,17 @@ styles.css
 data/*.json
 ```
 
-## Deploy
+or, for the GitHub Pages optimised bundle:
 
-This repo is ready for static hosting.
+```text
+index.html
+app.js
+styles.css
+data/appdata.part*.txt
+.nojekyll
+```
 
-### GitHub Pages
+## Deploy on GitHub Pages
 
 Use repository root as the Pages source:
 
@@ -41,7 +47,7 @@ Use repository root as the Pages source:
 4. Select folder `/root`.
 5. Save.
 
-### Netlify
+## Deploy on Netlify
 
 Use either drag-and-drop deployment or connect this GitHub repository.
 
