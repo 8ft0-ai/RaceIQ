@@ -2,7 +2,7 @@
 
 ## Use when
 
-Use this skill when preparing, reviewing, or summarising a RaceIQ pull request.
+Use this skill when preparing, reviewing, summarising, or providing a final recommendation for a RaceIQ pull request.
 
 ## Review focus
 
@@ -58,6 +58,19 @@ Use this structure in PR descriptions:
 Closes #<issue-number>
 ```
 
+## Final recommendation comment
+
+Before approval, add a top-level PR comment that covers:
+
+- issue alignment
+- scope control
+- validation evidence
+- analytics truth check
+- risks and caveats
+- final recommendation
+
+Recommendation options are `Approve`, `Approve after minor fixes`, and `Hold approval`.
+
 ## Done when
 
-The PR is understandable without reading the whole diff and the reviewer can see exactly what was changed, how it was validated, and what caveats remain.
+The PR is understandable without reading the whole diff and the reviewer can see exactly what was changed, how it was validated, what caveats remain, and whether approval is recommended.
