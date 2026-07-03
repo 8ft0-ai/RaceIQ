@@ -34,6 +34,7 @@ jobs:
       - name: Verify Team Report Card generator reproduces committed output
         run: |
           python tools/generate_team_report_cards.py
+          git diff --stat -- data/team_report_cards.json data/team_report_cards_validation.json
           git diff --exit-code -- data/team_report_cards.json data/team_report_cards_validation.json
 
       - name: Run RaceIQ static data validator
