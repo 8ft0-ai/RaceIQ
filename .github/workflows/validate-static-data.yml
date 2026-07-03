@@ -30,3 +30,6 @@ jobs:
 
       - name: Run RaceIQ static data validator
         run: python tools/validate_static_data.py
+
+      - name: Run RaceIQ static app smoke validator
+        run: python tools/validate_static_app.py
