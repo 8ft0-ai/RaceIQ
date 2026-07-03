@@ -47,6 +47,18 @@
     return 'bad';
   }
 
+  function confidenceClass(value) {
+    const v = String(value || '').toLowerCase();
+    if (v === 'high') return 'good';
+    if (v === 'medium' || v === 'usable_with_context') return 'warn';
+    if (v === 'low') return 'bad';
+    return 'warn';
+  }
+
+  function confidenceLabel(team) {
+    return team.data_confidence || team.report_card_confidence || 'not separately assigned';
+  }
+
   function movementBadge(value, label = '') {
     const cls = movementClass(value);
     const prefix = label ? `${label} ` : '';
@@ -111,14 +123,16 @@
 
   function renderCaveats(team) {
     const caveats = [];
+    caveats.push(`Confidence: ${confidenceLabel(team)}`);
     if (team.anomaly_status && team.anomaly_status !== 'none') caveats.push(`Anomalies: ${team.anomaly_status}`);
     if (team.known_incident_status && team.known_incident_status !== 'none') caveats.push(`Known incident: ${team.known_incident_status}`);
-    caveats.push('RaceIQ scores are explanatory, not official results.');
+    caveats.push('RaceIQ scores are explanatory story signals, not official race results.');
     return `<div class="notice"><strong>Caveats.</strong> ${escapeHtml(caveats.join(' · '))}</div>`;
   }
 
   function renderTeamDetail(team) {
     if (!team) return '<div class="notice"><p>Select a team to view its report card.</p></div>';
+    const confidence = confidenceLabel(team);
     return `<div class="card report-card-detail">
       <div class="report-card-hero">
         <div>
@@ -130,6 +144,7 @@
             ${badge(`RaceIQ ${fmt(team.report_card_score, 1)}/100`, scoreClass(team.report_card_score))}
             ${badge(`Final P${fmt(team.final_position, 0)}`)}
             ${badge(`${fmt(team.final_laps, 0)} laps`)}
+            ${badge(`Confidence ${confidence}`, confidenceClass(confidence))}
           </div>
         </div>
         <div class="grade-tile ${gradeClass(team.report_card_grade)}">
@@ -157,6 +172,7 @@
           <div class="detail-box"><strong>Consistency</strong><p>${fmt(team.consistency_score, 1)}/100</p></div>
           <div class="detail-box"><strong>Best phase</strong><p>${escapeHtml(team.best_phase || '—')}</p></div>
           <div class="detail-box"><strong>Key battle</strong><p>${escapeHtml(team.key_battle || '—')}</p></div>
+          <div class="detail-box"><strong>Confidence</strong><p>${escapeHtml(confidence)} · use alongside caveats and known incidents</p></div>
         </div>
       </div>
     </div>`;
@@ -176,19 +192,19 @@
       <div class="section-header">
         <div>
           <h2>Team Report Cards</h2>
-          <p>Each card combines finish result, grid movement, pace, consistency, inferred delay burden, battles, anomalies and known incidents into an explanatory post-race profile.</p>
+          <p>Each card combines finish result, grid movement, pace, consistency, inferred delay burden, battles, anomalies and known incidents into a post-race profile for review.</p>
         </div>
         <select id="teamReportSelect" aria-label="Select team report card">
           ${teams.map(t => `<option value="${escapeHtml(t.car_no)}">${escapeHtml(teamOptionLabel(t))}</option>`).join('')}
         </select>
       </div>
-      <div class="notice"><strong>Interpretation note.</strong> RaceIQ scores and grades are explanatory storytelling aids, not official race rankings. Caveats remain visible where anomalies or known incidents affect interpretation.</div>
+      <div class="notice"><strong>Interpretation note.</strong> RaceIQ scores and grades are explanatory storytelling aids, not official race rankings. First-observed movement is separate from true Grid → Finish movement because capture started after the race began. Caveats remain visible where anomalies or known incidents affect interpretation.</div>
       <div class="kpi-row">
-        ${kpi('Highest RaceIQ', bestScore ? `${bestScore.team_name} ${fmt(bestScore.report_card_score, 1)}` : '—')}
+        ${kpi('Highest RaceIQ', bestScore ? `${bestScore.team_name} ${fmt(bestScore.report_card_score, 1)}` : '—', 'explanatory score')}
         ${kpi('Winner', winner ? winner.team_name : '—', winner ? `Grade ${winner.report_card_grade || '—'}` : '')}
         ${kpi('Best grid recovery', bestRecovery ? `${bestRecovery.team_name} ${signed(bestRecovery.places_gained)}` : '—')}
         ${kpi('Cards', teams.length)}
-        ${kpi('Average score', fmt(avgScore, 1))}
+        ${kpi('Average score', fmt(avgScore, 1), 'not an official metric')}
         ${kpi('With caveats', caveatedTeams)}
       </div>
       <div class="grid cols-3 team-report-grid">
