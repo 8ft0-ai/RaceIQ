@@ -31,14 +31,16 @@ jobs:
       - name: Run Team Report Card generator dry run
         run: python tools/generate_team_report_cards.py --dry-run
 
-      - name: Verify Team Report Card generator reproduces committed output
-        run: |
-          python tools/generate_team_report_cards.py
-          git diff --stat -- data/team_report_cards.json data/team_report_cards_validation.json
-          git diff --exit-code -- data/team_report_cards.json data/team_report_cards_validation.json
+      - name: Generate Team Report Card outputs
+        run: python tools/generate_team_report_cards.py
 
-      - name: Run RaceIQ static data validator
+      - name: Validate generated static data
         run: python tools/validate_static_data.py
 
       - name: Run RaceIQ static app smoke validator
         run: python tools/validate_static_app.py
+
+      - name: Verify Team Report Card generator reproduces committed output
+        run: |
+          git diff --stat -- data/team_report_cards.json data/team_report_cards_validation.json
+          git diff --exit-code -- data/team_report_cards.json data/team_report_cards_validation.json
