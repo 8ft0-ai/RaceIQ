@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LiveRC Race Intelligence</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">LiveRC analytics-ready pack</p>
+        <h1>Race Intelligence Dashboard</h1>
+        <p class="hero-copy">Coverage-aware replay, team pace, pit / delay detection, head-to-head battles and anomaly review.</p>
+      </div>
+      <div class="hero-card" id="heroStatus">Loading race data…</div>
+    </header>
+
+    <nav class="tabs" aria-label="Dashboard sections">
+      <button class="tab active" data-tab="overview">Overview</button>
+      <button class="tab" data-tab="replay">Race replay</button>
+      <button class="tab" data-tab="teams">Team profiles</button>
+      <button class="tab" data-tab="delays">Pit / delay map</button>
+      <button class="tab" data-tab="battles">Head-to-head</button>
+      <button class="tab" data-tab="anomalies">Anomalies</button>
+      <button class="tab" data-tab="method">Method</button>
+    </nav>
+
+    <main>
+      <section id="overview" class="tab-panel active"></section>
+      <section id="replay" class="tab-panel"></section>
+      <section id="teams" class="tab-panel"></section>
+      <section id="delays" class="tab-panel"></section>
+      <section id="battles" class="tab-panel"></section>
+      <section id="anomalies" class="tab-panel"></section>
+      <section id="method" class="tab-panel"></section>
+    </main>
+  </div>
+
+  <template id="errorTemplate">
+    <div class="notice danger">
+      <h2>Could not load JSON data</h2>
+      <p>This app expects to be served from a small local web server. From this folder, run:</p>
+      <pre><code>python -m http.server 8000</code></pre>
+      <p>Then open <strong>http://localhost:8000</strong>.</p>
+    </div>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
