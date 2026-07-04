@@ -26,6 +26,25 @@ Required validation for this tier:
 - [ ] Branch follows `feature/<issue-number>-short-description`
 - [ ] No unrelated files or broad rewrites included
 - [ ] Non-goals from the issue are respected
+- [ ] Final diff reviewed against issue scope
+
+## Changed-files risk check
+
+Changed files:
+
+- 
+
+- App/runtime files changed: yes/no
+- Data files changed: yes/no
+- Analytics/scoring/inference logic changed: yes/no
+- CI/deployment/config changed: yes/no
+- Documentation/template only: yes/no
+- Delivery tier still correct: yes/no
+
+Risk follow-up:
+
+- [ ] Delivery tier reclassified if the final changed files are riskier than expected
+- [ ] Work paused and re-planned if the final diff no longer matches the linked issue scope
 
 ## Validation
 

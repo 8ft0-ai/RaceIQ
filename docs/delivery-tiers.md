@@ -32,8 +32,9 @@ Fast track process:
 3. Create a feature branch.
 4. Make the smallest possible change.
 5. Run validation appropriate to the change.
-6. Open a PR with the tier, reason and validation evidence.
-7. Merge after lightweight approval.
+6. Check the final changed files before opening or marking the PR ready.
+7. Open a PR with the tier, reason and validation evidence.
+8. Merge after lightweight approval.
 
 Fast track evidence should show:
 
@@ -41,6 +42,7 @@ Fast track evidence should show:
 - no analytics, data, scoring or official-result handling changed
 - no runtime behaviour changed
 - validation appropriate to the change was run or explicitly marked not required
+- the final changed files still support the Fast track classification
 
 ### Fast track exclusions
 
@@ -85,9 +87,10 @@ Standard process:
 5. Open a draft PR while work or validation is incomplete.
 6. Implement the smallest scoped change.
 7. Run validation appropriate to the affected files.
-8. Post a pre-approval groundedness review.
-9. Mark ready for review after validation is complete.
-10. Merge after approval and merge-gate checks.
+8. Complete the changed-files risk check against the final diff.
+9. Post a pre-approval groundedness review.
+10. Mark ready for review after validation is complete.
+11. Merge after approval and merge-gate checks.
 
 Standard validation should include:
 
@@ -132,11 +135,12 @@ Strict process:
 5. Open a draft PR and keep it draft until all validation is complete.
 6. Implement with narrow scope and traceability to the issue.
 7. Run data and UI validation.
-8. Complete an analytics truth review.
-9. Confirm risks and caveats remain visible.
-10. Post a pre-approval groundedness review.
-11. Merge only after approval and merge-gate checks.
-12. Perform a post-merge live dashboard spot-check.
+8. Complete the changed-files risk check against the final diff.
+9. Complete an analytics truth review.
+10. Confirm risks and caveats remain visible.
+11. Post a pre-approval groundedness review.
+12. Merge only after approval and merge-gate checks.
+13. Perform a post-merge live dashboard spot-check.
 
 Strict validation should include:
 
@@ -166,6 +170,35 @@ Use this decision table before implementation:
 
 When in doubt, choose the higher tier. The tier can be adjusted during implementation if the risk changes.
 
+## Changed-files risk check
+
+Before a PR is marked ready for review, review the final diff against `main`. Ground the readiness decision in the files that actually changed, not the implementation path, branch history or earlier assumptions.
+
+Record the changed-files risk check in the PR:
+
+```text
+Changed-files risk check:
+- App/runtime files changed: yes/no
+- Data files changed: yes/no
+- Analytics/scoring/inference logic changed: yes/no
+- CI/deployment/config changed: yes/no
+- Documentation/template only: yes/no
+- Delivery tier still correct: yes/no
+```
+
+Use the check to confirm that:
+
+- the final changed files match the linked issue scope
+- the final diff does not contain unrelated files, broad rewrites or connector churn
+- the selected delivery tier still fits the actual risk of the final diff
+- validation evidence covers every higher-risk file category that changed
+
+If the final changed files are riskier than expected, reclassify the delivery tier before asking for review and add the validation required by the higher tier. For example, a documentation issue that changes dashboard JavaScript should move out of documentation-only handling, and a UI issue that changes prepared data or scoring should be treated as Strict.
+
+If the final diff no longer matches the linked issue scope, pause the PR and re-plan. Remove or revert unrelated changes before review, or split them into a separate issue and branch. Do not mark the PR ready until the final diff is once again traceable to the issue.
+
+Fast track PRs can use a short changed-files note when the diff is trivial. Standard and Strict PRs should complete the full changed-files risk check before the pre-approval groundedness review.
+
 ## Required PR record
 
 Every PR should record:
@@ -174,9 +207,10 @@ Every PR should record:
 - reason for the tier
 - validation required by the tier
 - validation actually completed
+- final changed-files risk check
 - any caveats or follow-up checks
 
-For Fast track PRs, keep the explanation short. For Standard and Strict PRs, use the full template and complete the groundedness and merge-gate sections.
+For Fast track PRs, keep the explanation short. For Standard and Strict PRs, use the full template and complete the changed-files, groundedness and merge-gate sections.
 
 ## Retros
 
