@@ -34,7 +34,12 @@ Changed files:
 
 - 
 
-Delivery tier still correct: yes/no
+- App/runtime files changed: yes/no
+- Data files changed: yes/no
+- Analytics/scoring/inference logic changed: yes/no
+- CI/deployment/config changed: yes/no
+- Documentation/template only: yes/no
+- Delivery tier still correct: yes/no
 
 ## Validation
 
