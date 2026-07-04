@@ -1,1 +1,1 @@
-/* Empty placeholder retained because Method tab content now renders directly from app.js. */
+/* Placeholder only. */
