@@ -41,7 +41,7 @@ Fast track evidence should show:
 - scope is trivial and isolated
 - no analytics, data, scoring or official-result handling changed
 - no runtime behaviour changed
-- validation appropriate to the change was run or explicitly marked not required
+- validation appropriate to the change was run or explicitly marked not required with a reason
 - the final changed files still support the Fast track classification
 
 ### Fast track exclusions
@@ -100,6 +100,7 @@ Standard validation should include:
 - `python tools/validate_static_data.py` when data compatibility is relevant
 - browser smoke for UI changes
 - cache-busted local URL when changed static JavaScript may be cached
+- a clear reason for any validation step that is not run
 
 For UI or JavaScript changes, use a fresh URL such as:
 
@@ -154,6 +155,7 @@ Strict validation should include:
 - First Observed is not presented as true grid
 - known incidents, timing issues, anomalies and confidence caveats remain visible
 - RaceIQ scores and grades remain explanatory aids, not official rankings
+- a clear reason for any validation step that is not run
 
 ## Choosing a tier
 
@@ -199,6 +201,41 @@ If the final diff no longer matches the linked issue scope, pause the PR and re-
 
 Fast track PRs can use a short changed-files note when the diff is trivial. Standard and Strict PRs should complete the full changed-files risk check before the pre-approval groundedness review.
 
+## Skipped validation reasons
+
+Validation should be proportional to the delivery tier and the final changed files. A PR does not need to run every possible validation step, but every validation step that is not run must include a clear reason explaining why it is safe to omit for that diff.
+
+A good validation note is specific to the changed files:
+
+```text
+Browser smoke: Not required because no app runtime, UI, JavaScript, CSS or data files changed.
+```
+
+An incomplete validation note is not enough:
+
+```text
+Browser smoke: Not required.
+```
+
+Apply this rule to validation decisions such as:
+
+- static data validation
+- local static server smoke
+- browser smoke
+- browser console checks
+- existing tab checks
+- JSON path checks
+- missing-value rendering checks
+- deployed-page checks
+
+Examples:
+
+- Documentation/template-only change: browser smoke and static data validation can be marked not required when the final diff contains only Markdown or PR-template files, with the reason recorded against each skipped check.
+- UI/runtime change: browser smoke, console checks and affected-tab checks should normally run; static data validation can be marked not required only when no prepared data, schema, JSON path or analytics compatibility surface changed.
+- Analytics/data change: static data validation, local static serving, JSON path checks, missing-value rendering checks and analytics truth review should normally run; any omitted check needs a concrete reason tied to the final diff.
+
+Fast track remains lightweight, but lightweight does not mean silent. A Fast track PR can use a short validation note, but it must still explain why heavier checks were unnecessary. Standard and Strict PRs should make skipped-validation reasoning detailed enough for a reviewer to audit the decision.
+
 ## Required PR record
 
 Every PR should record:
@@ -207,10 +244,11 @@ Every PR should record:
 - reason for the tier
 - validation required by the tier
 - validation actually completed
+- reasons for validation steps that were not run
 - final changed-files risk check
 - any caveats or follow-up checks
 
-For Fast track PRs, keep the explanation short. For Standard and Strict PRs, use the full template and complete the changed-files, groundedness and merge-gate sections.
+For Fast track PRs, keep the explanation short. For Standard and Strict PRs, use the full template and complete the changed-files, validation-reasoning, groundedness and merge-gate sections.
 
 ## Retros
 
