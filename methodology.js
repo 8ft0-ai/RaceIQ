@@ -1,1 +1,1 @@
-// Methodology content now lives in app.js so renderAll() uses it directly after data load.
+// Intentionally retained as a no-op placeholder after Method methodology was moved into app.js.
