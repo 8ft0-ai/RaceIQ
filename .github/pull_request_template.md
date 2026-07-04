@@ -48,12 +48,32 @@ Risk follow-up:
 
 ## Validation
 
+For each validation item, record the result. If a check was not run, include the reason.
+
 - [ ] Static data validation run with `python tools/validate_static_data.py`
+  - Result:
+  - Reason if not run:
 - [ ] Served locally with `python -m http.server 8000`
-- [ ] Browser console checked where UI is affected
-- [ ] Existing tabs still work where UI is affected
+  - Result:
+  - Reason if not run:
+- [ ] Browser smoke completed where UI/runtime is affected
+  - Result:
+  - Reason if not run:
+- [ ] Browser console checked where UI/runtime is affected
+  - Result:
+  - Reason if not run:
+- [ ] Existing tabs still work where UI/runtime is affected
+  - Result:
+  - Reason if not run:
 - [ ] New/changed JSON paths load correctly
+  - Result:
+  - Reason if not run:
+- [ ] Missing values render gracefully where data/UI is affected
+  - Result:
+  - Reason if not run:
 - [ ] Data caveats are visible where needed
+  - Result:
+  - Reason if not run:
 
 Browser validation status: Completed / Pending local or Codex smoke / Not required
 
@@ -72,6 +92,7 @@ Pending browser validation note, if applicable:
 ## Ready-for-review gate
 
 - [ ] Validation evidence is recorded above
+- [ ] Validation reasons are recorded where a check was not run
 - [ ] Known caveats are documented
 - [ ] The PR is small enough to review confidently
 - [ ] Draft status can be removed
