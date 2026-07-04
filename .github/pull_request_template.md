@@ -6,6 +6,20 @@
 
 Closes #
 
+## Delivery tier
+
+- [ ] Fast track
+- [ ] Standard
+- [ ] Strict
+
+Reason:
+
+- 
+
+Required validation for this tier:
+
+- 
+
 ## Scope check
 
 - [ ] Matches the linked issue
