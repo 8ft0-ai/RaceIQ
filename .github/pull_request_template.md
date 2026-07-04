@@ -26,6 +26,15 @@ Required validation for this tier:
 - [ ] Branch follows `feature/<issue-number>-short-description`
 - [ ] No unrelated files or broad rewrites included
 - [ ] Non-goals from the issue are respected
+- [ ] Final diff reviewed against issue scope
+
+## Changed-files risk check
+
+Changed files:
+
+- 
+
+Delivery tier still correct: yes/no
 
 ## Validation
 
