@@ -41,6 +41,11 @@ Changed files:
 - Documentation/template only: yes/no
 - Delivery tier still correct: yes/no
 
+Risk follow-up:
+
+- [ ] Delivery tier reclassified if the final changed files are riskier than expected
+- [ ] Work paused and re-planned if the final diff no longer matches the linked issue scope
+
 ## Validation
 
 - [ ] Static data validation run with `python tools/validate_static_data.py`
