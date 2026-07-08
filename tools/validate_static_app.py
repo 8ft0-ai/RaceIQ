@@ -29,11 +29,22 @@ EXPECTED_TABS = [
 
 EXPECTED_SCRIPTS = [
     "app.js",
-    "report-cards.js",
+    "dashboard-enhancements.js",
 ]
 
 REQUIRED_ENHANCEMENT_SCRIPTS = [
+    "pit-delay-controls.js",
+    "pit-delay-review.js",
+    "anomaly-triage.js",
+    "anomaly-review.js",
+    "review-context-panels.js",
+    "overview-anomaly-context.js",
+    "method-discoverability.js",
     "race-replay-confidence-labels.js",
+    "race-replay-trace-highlight.js",
+    "team-metric-parity.js",
+    "pace-profile-ties.js",
+    "report-cards.js",
 ]
 
 DATA_PATH_RE = re.compile(r"[\"'](data/[A-Za-z0-9_./-]+\.json)[\"']")
@@ -114,7 +125,16 @@ def validate_index(parser: DashboardHtmlParser, errors: list[str]) -> None:
     require_expected_values("tab buttons", EXPECTED_TABS, parser.tab_buttons, errors)
     require_expected_values("tab panels", EXPECTED_TABS, parser.tab_panels, errors)
     require_expected_values("script references", EXPECTED_SCRIPTS, parser.scripts, errors)
-    require_expected_values("enhancement script references", REQUIRED_ENHANCEMENT_SCRIPTS, parser.scripts, errors)
+
+    unexpected_enhancement_refs = [
+        script for script in parser.scripts
+        if script in REQUIRED_ENHANCEMENT_SCRIPTS
+    ]
+    if unexpected_enhancement_refs:
+        errors.append(
+            "Enhancement scripts should be loaded through dashboard-enhancements.js, not index.html: "
+            + ", ".join(unexpected_enhancement_refs)
+        )
 
     for tab in parser.tab_buttons:
         if tab not in parser.tab_panels:
@@ -135,6 +155,27 @@ def validate_local_refs(parser: DashboardHtmlParser, errors: list[str]) -> None:
             continue
         if not (ROOT / local_path).exists():
             errors.append(f"Missing local static reference from <{tag}>: {ref}")
+
+
+def validate_enhancement_bootstrap(script_refs: list[str], errors: list[str]) -> None:
+    if "dashboard-enhancements.js" not in script_refs:
+        errors.append("Missing dashboard enhancement bootstrap: dashboard-enhancements.js")
+        return
+
+    bootstrap = read_text(ROOT / "dashboard-enhancements.js", errors)
+    for script in REQUIRED_ENHANCEMENT_SCRIPTS:
+        if script not in bootstrap:
+            errors.append(f"Missing enhancement script from bootstrap plan: {script}")
+        if not (ROOT / script).exists():
+            errors.append(f"Bootstrap references missing enhancement script: {script}")
+
+
+def validation_script_refs(parser_scripts: list[str]) -> list[str]:
+    refs: list[str] = []
+    for script in [*parser_scripts, *REQUIRED_ENHANCEMENT_SCRIPTS]:
+        if script not in refs:
+            refs.append(script)
+    return refs
 
 
 def validate_data_paths(script_refs: list[str], errors: list[str]) -> None:
@@ -175,7 +216,8 @@ def main() -> int:
 
     validate_index(parser, errors)
     validate_local_refs(parser, errors)
-    validate_data_paths(parser.scripts, errors)
+    validate_enhancement_bootstrap(parser.scripts, errors)
+    validate_data_paths(validation_script_refs(parser.scripts), errors)
 
     if errors:
         print("RaceIQ static app validation failed:", file=sys.stderr)
