@@ -32,6 +32,10 @@ EXPECTED_SCRIPTS = [
     "report-cards.js",
 ]
 
+REQUIRED_ENHANCEMENT_SCRIPTS = [
+    "race-replay-confidence-labels.js",
+]
+
 DATA_PATH_RE = re.compile(r"[\"'](data/[A-Za-z0-9_./-]+\.json)[\"']")
 LOCAL_REF_ATTRS = {
     "script": ["src"],
@@ -110,6 +114,7 @@ def validate_index(parser: DashboardHtmlParser, errors: list[str]) -> None:
     require_expected_values("tab buttons", EXPECTED_TABS, parser.tab_buttons, errors)
     require_expected_values("tab panels", EXPECTED_TABS, parser.tab_panels, errors)
     require_expected_values("script references", EXPECTED_SCRIPTS, parser.scripts, errors)
+    require_expected_values("enhancement script references", REQUIRED_ENHANCEMENT_SCRIPTS, parser.scripts, errors)
 
     for tab in parser.tab_buttons:
         if tab not in parser.tab_panels:
