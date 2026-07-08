@@ -25,6 +25,16 @@ If the issue is unclear, hold implementation. Do not create a branch or make cha
 
 If the issue is ready, post an implementation plan comment before creating the feature branch. The plan should list the files expected to change, implementation steps, data or UI contract, validation plan, scope controls, risks and proposed branch name.
 
+## Issue labels and workflow state
+
+Use `docs/ISSUE_LABELS_AND_STATE.md` as the repository convention for issue labels, workflow state labels, blocker labels and handoff comments.
+
+Apply labels prospectively to active work rather than noisy closed-issue backfills. Use classification labels such as `type:*`, `area:*`, `exec:*`, `risk:*` and `gate:*` to describe what the issue is and how it should be routed. Use one active `state:*` label where possible to show the current workflow state.
+
+If an issue is labelled `state:blocked`, it must also have at least one `blocked:*` reason label and a handoff comment explaining what is blocked, what has already passed, what is missing and the next action.
+
+A handoff is incomplete unless the issue or PR states the branch or PR where relevant, validation status, missing work and next action.
+
 ## Current iteration context
 
 The Report Cards feature is split across linked issues:

@@ -2,7 +2,7 @@
 
 This document describes the lightweight delivery gates for the RaceIQ issue-to-PR workflow.
 
-The ideas behind these gates are recorded in #11. The first implementation is tracked in #12. The pre-approval groundedness review gate is tracked in #15. The pre-branch issue intake gates are tracked in #17. The draft PR browser-validation fallback is tracked in #34.
+The ideas behind these gates are recorded in #11. The first implementation is tracked in #12. The pre-approval groundedness review gate is tracked in #15. The pre-branch issue intake gates are tracked in #17. The issue label and state-tracking convention is tracked in #32. The draft PR browser-validation fallback is tracked in #34.
 
 ## Principles
 
@@ -49,6 +49,7 @@ For RaceIQ, also check:
 - live collection is not being introduced unless explicitly requested
 - the data contract is clear for data-mart or UI-over-data work
 - known caveats and incidents remain visible
+- the expected `type:*`, `area:*`, `exec:*`, `risk:*`, `gate:*` and initial `state:*` labels are clear enough for routing
 
 If the issue is not ready, hold implementation and post a clarification comment instead of creating a branch.
 
@@ -90,6 +91,7 @@ Confirmed:
 - Acceptance criteria are testable
 - Validation expectations are known
 - RaceIQ analytics caveats are preserved where relevant
+- Labels and workflow state have been considered
 
 Next step: post an implementation plan before creating the feature branch.
 ```
@@ -109,6 +111,7 @@ The implementation plan should include:
 - scope controls
 - risks / caveats
 - proposed branch name
+- expected classification, execution, risk, gate and workflow state labels
 
 Suggested structure:
 
@@ -150,6 +153,13 @@ This will not:
 ### Risks / caveats
 
 - ...
+
+### Labels and workflow state
+
+- Classification labels:
+- Execution labels:
+- Risk / gate labels:
+- Initial state label:
 
 ### Branch
 
@@ -208,6 +218,7 @@ Examples:
 ```text
 feature/12-delivery-gates
 feature/17-issue-intake-gates
+feature/32-labels-and-state-tracking
 ```
 
 Do not commit directly to `main` unless explicitly asked for a hotfix.
@@ -350,22 +361,16 @@ Reviewer / user: approves judgement gates and merge
 GitHub branch protection: prevents bypassing the process
 ```
 
-## Labels
+## Labels and state tracking
 
-Suggested labels for gate state:
+Use `docs/ISSUE_LABELS_AND_STATE.md` for the maintained RaceIQ label taxonomy and workflow state convention.
 
-```text
-gate:needs-shaping
-gate:ready-to-plan
-gate:implementation-planned
-gate:ready-for-branch
-gate:data-contract-approved
-gate:in-progress
-gate:ready-for-pr
-gate:ready-for-review
-gate:groundedness-reviewed
-gate:approved
-gate:merged
-```
+The core rules are:
 
-These labels are optional. The core controls are the issue template, issue intake comments, implementation plan comment, branch naming convention, draft PRs, validation workflow, PR checklist and pre-approval groundedness review comment.
+- classification labels describe the work area, type, execution path, risk and expected gates
+- one active `state:*` label should describe where open work currently sits where practical
+- `exec:local-required` means the issue should not be treated as connector-only work, especially for large JSON, generated data, UI assets, visual checks or local browser-smoke work
+- `state:blocked` must be paired with at least one `blocked:*` reason label and a handoff comment
+- handoff is incomplete unless branch/PR, validation status, missing work and next action are visible
+
+These labels make the delivery gates easier to route and audit. They do not replace the issue template, issue intake comments, implementation plan comment, branch naming convention, draft PRs, validation workflow, PR checklist or pre-approval groundedness review comment.

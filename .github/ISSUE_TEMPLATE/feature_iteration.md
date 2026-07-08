@@ -8,6 +8,16 @@ body:
     attributes:
       value: |
         Use this template to pass the Issue Readiness Gate before creating a feature branch.
+
+        Apply issue labels using `docs/ISSUE_LABELS_AND_STATE.md`. Classification labels describe the kind of work; one active `state:*` label should describe the current workflow state where useful.
+  - type: textarea
+    id: routing-labels
+    attributes:
+      label: Suggested routing labels
+      description: Which `area:*`, `type:*`, `exec:*`, `risk:*`, `gate:*` and initial `state:*` labels should be applied?
+      placeholder: type:ui, area:report-cards, exec:local-required, risk:visual-regression, gate:browser-smoke, state:ready
+    validations:
+      required: false
   - type: textarea
     id: goal
     attributes:
@@ -94,6 +104,8 @@ body:
       label: Pre-branch readiness
       options:
         - label: Issue has enough detail for implementation
+          required: true
+        - label: Classification and workflow state labels have been considered
           required: true
         - label: Data or UI contract is clear where relevant
           required: true
