@@ -25,6 +25,14 @@ If the issue is unclear, hold implementation. Do not create a branch or make cha
 
 If the issue is ready, post an implementation plan comment before creating the feature branch. The plan should list the files expected to change, implementation steps, data or UI contract, validation plan, scope controls, risks and proposed branch name.
 
+## Validation modes and merge authority
+
+Use `docs/VALIDATION_MODES.md` to classify each issue and PR as `connector-only safe`, `GitHub Actions safe`, `local/browser required before merge`, or `browser-pending merge allowed by explicit user authority`.
+
+Browser-pending merge is an exception, not the default path for UI work. It must be explicitly authorised, recorded in the PR, and must not be used when analytics truth, data correctness, scoring, caveat wording or generated data is uncertain.
+
+Do not mark browser validation complete unless it was actually completed.
+
 ## Issue labels and workflow state
 
 Use `docs/ISSUE_LABELS_AND_STATE.md` as the repository convention for issue labels, workflow state labels, blocker labels and handoff comments.
