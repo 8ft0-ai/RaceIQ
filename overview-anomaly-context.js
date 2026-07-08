@@ -38,8 +38,9 @@
     const { total, broad, reviewFirst } = anomalyCounts();
     const metric = card.querySelector('.metric');
     const label = card.querySelector('.metric-label');
-    if (metric) metric.textContent = fmt(reviewFirst);
-    if (label) label.textContent = 'Review-first anomalies';
+    const metricText = fmt(reviewFirst);
+    if (metric && metric.textContent !== metricText) metric.textContent = metricText;
+    if (label && label.textContent !== 'Review-first anomalies') label.textContent = 'Review-first anomalies';
 
     let note = card.querySelector('[data-overview-anomaly-note="true"]');
     if (!note) {
@@ -48,7 +49,8 @@
       note.dataset.overviewAnomalyNote = 'true';
       card.appendChild(note);
     }
-    note.textContent = `${fmt(total)} total open · ${fmt(broad)} broad timing signals. Review signals, not official findings.`;
+    const noteText = `${fmt(total)} total open · ${fmt(broad)} broad timing signals. Review signals, not official findings.`;
+    if (note.textContent !== noteText) note.textContent = noteText;
   }
 
   function start() {
