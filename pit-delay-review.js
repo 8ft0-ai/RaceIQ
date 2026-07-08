@@ -91,6 +91,24 @@
     return { evidence, explanation };
   }
 
+  function enhancementKey(event) {
+    return JSON.stringify([
+      event.start_race_clock_display,
+      event.team_name,
+      event.event_type,
+      event.severity,
+      event.duration_display,
+      event.duration_seconds,
+      event.excess_delay_display,
+      event.excess_delay_seconds,
+      event.estimated_laps_lost,
+      event.position_loss,
+      event.leader_laps_gained,
+      event.confidence,
+      event.known_incident_id
+    ]);
+  }
+
   function currentRows() {
     try {
       if (Array.isArray(window.__raceIqPitDelayRows)) return window.__raceIqPitDelayRows;
@@ -117,7 +135,11 @@
       const cell = tr.children[reasonIndex];
       if (!event || !cell) return;
 
+      const key = enhancementKey(event);
+      if (cell.dataset.pitDelayReviewKey === key) return;
+
       const { evidence, explanation } = buildReason(event);
+      cell.dataset.pitDelayReviewKey = key;
       cell.innerHTML = `
         <div class="story-title">${escapeHtml(reviewPriority(event))} · ${escapeHtml(eventTypeLabel(event))}</div>
         <p>${escapeHtml(explanation)}</p>

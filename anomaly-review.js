@@ -80,6 +80,19 @@
     return fields.join(' · ');
   }
 
+  function enhancementKey(row) {
+    return JSON.stringify([
+      row.anomaly_type,
+      row.severity,
+      row.metric_name,
+      row.metric_value,
+      row.observation_count,
+      row.lap,
+      row.position,
+      row.known_incident_status
+    ]);
+  }
+
   function currentRows() {
     try {
       if (Array.isArray(window.__raceIqAnomalyRows)) return window.__raceIqAnomalyRows;
@@ -110,6 +123,10 @@
       const cell = tr.children[actionIndex];
       if (!row || !cell) return;
 
+      const key = enhancementKey(row);
+      if (cell.dataset.anomalyActionReviewKey === key) return;
+
+      cell.dataset.anomalyActionReviewKey = key;
       cell.innerHTML = `
         <div class="story-title">${escapeHtml(actionLabel(row))}</div>
         <p>${escapeHtml(guidance(row))}</p>

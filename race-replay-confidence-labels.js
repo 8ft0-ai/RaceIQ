@@ -28,7 +28,8 @@
       const suffix = raw === 'observed_since_capture'
         ? ' — baseline is the first captured snapshot, not the race start'
         : '';
-      paragraph.textContent = `${before}${readable}${suffix}`;
+      const nextText = `${before}${readable}${suffix}`;
+      if (paragraph.textContent !== nextText) paragraph.textContent = nextText;
     });
   }
 
