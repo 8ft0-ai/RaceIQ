@@ -93,6 +93,7 @@
 
   function currentRows() {
     try {
+      if (Array.isArray(window.__raceIqPitDelayRows)) return window.__raceIqPitDelayRows;
       if (typeof state === 'undefined' || !Array.isArray(state.pitEvents)) return [];
       const filter = document.getElementById('delayFilter')?.value || 'all';
       const rows = filter === 'all' ? state.pitEvents : state.pitEvents.filter(event => event.event_type === filter);
@@ -131,9 +132,11 @@
 
     const observer = new MutationObserver(() => enhanceTable());
     observer.observe(delays, { childList: true, subtree: true });
+    const delayTable = document.getElementById('delayTable');
+    if (delayTable) delayTable.addEventListener('raceiq:pit-delay-rows-changed', enhanceTable);
 
     document.addEventListener('change', event => {
-      if (event.target && event.target.id === 'delayFilter') {
+      if (event.target && (event.target.id === 'delayFilter' || event.target.id === 'delaySort')) {
         window.requestAnimationFrame(enhanceTable);
       }
     });
