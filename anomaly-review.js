@@ -42,9 +42,7 @@
 
   function guidance(row) {
     const type = row.anomaly_type || '';
-    const metric = formatNumber(row.metric_value, type === 'suspicious_fastest_lap' ? 2 : 1);
     const metricName = labelFromEnum(row.metric_name);
-    const observations = formatNumber(row.observation_count, 0);
 
     if (row.known_incident_status && row.known_incident_status !== 'none') {
       return 'Read this against the known incident context before using it as performance evidence.';
@@ -84,6 +82,7 @@
 
   function currentRows() {
     try {
+      if (Array.isArray(window.__raceIqAnomalyRows)) return window.__raceIqAnomalyRows;
       if (typeof state === 'undefined' || !Array.isArray(state.anomalies)) return [];
       return state.anomalies.slice(0, 220);
     } catch (_err) {
@@ -125,6 +124,7 @@
 
     const observer = new MutationObserver(() => enhanceTable());
     observer.observe(anomalies, { childList: true, subtree: true });
+    anomalies.addEventListener('raceiq:anomaly-rows-changed', enhanceTable);
 
     enhanceTable();
   }
