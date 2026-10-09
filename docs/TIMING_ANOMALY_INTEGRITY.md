@@ -48,7 +48,7 @@ The deployed GitHub Pages application remains static HTML, CSS and JavaScript; n
 
 To regenerate an already verified candidate:
 1. On the existing feature branch, run python3 tools/block_timing_anomaly.py --check to verify deterministic current output.
-2. For exact frozen inputs or a fully validated blocked-state candidate, run python3 tools/block_timing_anomaly.py --apply. Input authority is checked before transformation, and all outputs are staged and validated before workspace file replacement.
+2. For exact frozen inputs or a fully validated blocked-state candidate, run python3 tools/block_timing_anomaly.py --apply. Input authority is checked before transformation, and all outputs are staged and validated before an all-files directory rename. An ordinary rename failure restores the prior data directory; abrupt machine loss between directory renames requires recovery from the preserved backup. Git commit remains the deployment transaction.
 3. Run python3 tools/validate_static_data.py and python3 tools/validate_static_app.py.
 4. Run python3 tools/test_timing_anomaly_integrity.py, supplying RACEIQ_SOURCE_SQLITE as the path to the local prepared analytics SQLite. This source must represent the pinned 27,550 original observations; the digest check is mandatory.
 5. Serve locally with python3 -m http.server 8000 and perform genuine manual browser/tab/console/missing-value validation. Static HTTP retrieval tests do not close this browser gate.
@@ -58,5 +58,7 @@ The old report-card score generator intentionally refuses to regenerate a blocke
 ## Explicit non-goals and approval status
 
 No original battle, clean-pace or scoring generator has been recovered or reconstructed. No corrected performance metrics are asserted. No original collector or official final-result data has been edited. No workflows, merge or deployment are permitted by this candidate.
+
+The V01 source SQLite SHA-256 proof runs only when the local prepared SQLite is supplied; the PR workflow performs committed-JSON contract checks but does not independently inspect that SQLite or its archive. Do not report PR CI as independent source-digest certification.
 
 V01–V16 scripted tests demonstrate the bounded source and static integrity assumptions. They do not constitute browser inspection or independent groundedness approval. This candidate remains in review until the UI/browser gate and genuinely fresh review are completed.

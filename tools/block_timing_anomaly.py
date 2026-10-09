@@ -275,10 +275,16 @@ def checked_staging(outputs):
             validate_static_data.validate_timing_integrity()
         finally:
             validate_static_data.DATA = old_data
-        # Git commit is the publication transaction. Partial workspace writes
-        # cannot deploy to Pages and will fail static validation.
-        for name in outputs:
-            os.replace(staged / (name + ".json"), DATA / (name + ".json"))
+        # Publish the entire data directory as one renamed unit, not a
+        # sequence of independently visible JSON replacements. On an ordinary
+        # rename failure restore the previous directory before propagating.
+        backup = Path(directory) / "data-before-publication"
+        os.replace(DATA, backup)
+        try:
+            os.replace(staged, DATA)
+        except BaseException:
+            os.replace(backup, DATA)
+            raise
 
 def main():
     p = argparse.ArgumentParser()

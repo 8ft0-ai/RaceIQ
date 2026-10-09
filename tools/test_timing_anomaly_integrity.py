@@ -19,6 +19,7 @@ import subprocess
 import tempfile
 import threading
 import unittest
+from unittest import mock
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.request import urlopen
 
@@ -275,6 +276,30 @@ class ContractV2(unittest.TestCase):
             cwd=ROOT,capture_output=True,text=True)
         self.assertNotEqual(result.returncode,0)
         self.assertIn("regeneration is prohibited",result.stderr+result.stdout)
+
+    def test_publication_rename_failure_restores_exact_previous_data(self):
+        spec = importlib.util.spec_from_file_location("blocking_preparer", ROOT / "tools/block_timing_anomaly.py")
+        preparer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(preparer)
+        with tempfile.TemporaryDirectory() as tmp:
+            copied = Path(tmp) / "data"
+            shutil.copytree(DATA, copied)
+            before = {p.name: p.read_bytes() for p in copied.iterdir() if p.is_file()}
+            preparer.DATA = copied
+            outputs = preparer.generate(preparer.collect())
+            genuine_replace = os.replace
+            attempts = 0
+            def fail_second_rename(src, dst):
+                nonlocal attempts
+                attempts += 1
+                if attempts == 2:
+                    raise OSError("injected publication rename failure")
+                return genuine_replace(src, dst)
+            with mock.patch.object(preparer.os, "replace", side_effect=fail_second_rename):
+                with self.assertRaisesRegex(OSError, "injected publication"):
+                    preparer.checked_staging(outputs)
+            self.assertEqual(attempts, 3, "Expected backup, injected failure, rollback")
+            self.assertEqual(before, {p.name: p.read_bytes() for p in copied.iterdir() if p.is_file()})
 
     def test_v16_static_wiring_paths_and_javascript_syntax(self):
         for script in (ROOT).glob("*.js"):
