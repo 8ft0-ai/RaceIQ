@@ -55,10 +55,12 @@ function table(rows, columns, empty = 'No data') {
 }
 
 function bars(rows, nameKey, valueKey, opts = {}) {
-  const vals = rows.map(r => Number(r[valueKey]) || 0);
+  const eligible = rows.filter(r => typeof r[valueKey] === 'number' && Number.isFinite(r[valueKey]));
+  if (!eligible.length) return '<p>Not verified — timing-integrity review.</p>';
+  const vals = eligible.map(r => r[valueKey]);
   const max = Math.max(...vals, 1);
-  return `<div class="chart">${rows.map(r => {
-    const v = Number(r[valueKey]) || 0;
+  return `<div class="chart">${eligible.map(r => {
+    const v = r[valueKey];
     const w = Math.max(1, Math.round((v / max) * 100));
     return `<div class="bar-row"><div class="bar-name" title="${escapeHtml(r[nameKey])}">${escapeHtml(r[nameKey])}</div><div class="bar-track"><div class="bar-fill" style="width:${w}%"></div></div><div class="bar-value">${escapeHtml(opts.format ? opts.format(v) : fmt(v))}</div></div>`;
   }).join('')}</div>`;
@@ -85,11 +87,11 @@ function renderOverview() {
     </div>
     <div class="grid cols-2">
       <div class="card"><h2>Final standings</h2>${bars(state.standings.slice(0, 12), 'team_name', 'final_laps', { format: v => fmt(v,0) })}</div>
-      <div class="card"><h2>Top pace profiles</h2>${bars(o.top_pace, 'team_name', 'median_clean_lph', { format: v => `${fmt(v)} lph` })}</div>
+      <div class="card"><h2>Pace ranking (not verified)</h2>${bars(o.top_pace, 'team_name', 'median_clean_lph', { format: v => `${fmt(v)} lph` })}</div>
     </div>
-    <div class="section-header"><div><h2>Top race stories</h2><p>Battle cards and delay burden are generated from validated, coverage-aware marts.</p></div></div>
+    <div class="section-header"><div><h2>Analytics integrity</h2><p>Battle scores, global rankings and affected pace metrics are withheld pending timing-anomaly review; verified delay evidence remains separate.</p></div></div>
     <div class="grid cols-2">
-      <div class="card"><h3>Best head-to-head battles</h3>${(o.top_battles||[]).map(b => `<div class="story-item"><div class="story-title">${escapeHtml(b.team_name_a)} v ${escapeHtml(b.team_name_b)}</div><p>${escapeHtml(b.battle_card_narrative)}</p><div class="story-meta">Score ${fmt(b.battle_score)} · ${escapeHtml(b.battle_class)} · ${fmt(b.lead_switches,0)} lead switches</div></div>`).join('')}</div>
+      <div class="card"><h3>Battle rankings blocked (timing review)</h3>${(o.top_battles||[]).map(b => `<div class="story-item"><div class="story-title">${escapeHtml(b.team_name_a)} v ${escapeHtml(b.team_name_b)}</div><p>${escapeHtml(b.battle_card_narrative)}</p><div class="story-meta">Score ${b.battle_score === null ? "Not verified" : fmt(b.battle_score)} · ${escapeHtml(b.battle_class)} · ${fmt(b.lead_switches,0)} lead switches</div></div>`).join('')}</div>
       <div class="card"><h3>Largest inferred delay burden</h3>${table(o.top_delay_burden, [
         {label:'Team', key:'team_name'},
         {label:'Events', key:'delay_burden_event_count', render:r=>fmt(r.delay_burden_event_count,0)},
@@ -171,15 +173,15 @@ function renderTeams() {
     <div id="teamDetail"></div>`;
   const select = $('teamSelect');
   select.innerHTML = teams.map(t => `<option value="${t.car_no}">${t.final_position}. ${escapeHtml(t.team_name)}</option>`).join('');
-  const cardHtml = teams.map(t => `<div class="card team-card" data-car="${t.car_no}"><h3>${t.final_position}. ${escapeHtml(t.team_name)}</h3><p>${escapeHtml(t.profile_headline || '')}</p><div class="controls">${badge(`${fmt(t.median_clean_lph)} lph`)} ${badge(`${fmt(t.pace_consistency_score)} consistency`)}</div></div>`).join('');
+  const cardHtml = teams.map(t => `<div class="card team-card" data-car="${t.car_no}"><h3>${t.final_position}. ${escapeHtml(t.team_name)}</h3><p>${escapeHtml(t.profile_headline || '')}</p><div class="controls">${badge(`${t.median_clean_lph === null ? "Not verified" : fmt(t.median_clean_lph)+" lph"}`)} ${badge(`${t.pace_consistency_score === null ? "Not verified" : fmt(t.pace_consistency_score)+" consistency"}`)}</div></div>`).join('');
   $('teamCards').innerHTML = cardHtml;
   const render = (carNo) => {
     document.querySelectorAll('.team-card').forEach(c => c.classList.toggle('selected', String(c.dataset.car) === String(carNo)));
     const t = teams.find(x => String(x.car_no) === String(carNo)) || teams[0];
     $('teamDetail').innerHTML = `<div class="grid cols-2">
       <div class="card"><h3>${escapeHtml(t.team_name)}</h3><p>${escapeHtml(t.profile_narrative || '')}</p><div class="kpi-row" style="grid-template-columns:repeat(3,1fr)">
-        ${kpi('Final position', t.final_position)}${kpi('Final laps', t.final_laps)}${kpi('Clean pace', `${fmt(t.median_clean_lph)} lph`)}
-        ${kpi('Consistency', `${fmt(t.pace_consistency_score)}/100`)}${kpi('Reliability', `${fmt(t.race_reliability_score)}/100`)}${kpi('Delay burden', t.total_delay_display || '—')}
+        ${kpi('Final position', t.final_position)}${kpi('Final laps', t.final_laps)}${kpi('Clean pace', `${t.median_clean_lph === null ? "Not verified" : fmt(t.median_clean_lph)+" lph"}`)}
+        ${kpi('Consistency', `${t.pace_consistency_score === null ? "Not verified" : fmt(t.pace_consistency_score)+"/100"}`)}${kpi('Reliability', `${t.race_reliability_score === null ? "Not verified" : fmt(t.race_reliability_score)+"/100"}`)}${kpi('Delay burden', t.total_delay_display || '—')}
       </div></div>
       <div class="card"><h3>Phase pace</h3>${bars([
         {phase:'Opening', value:t.opening_median_lph},{phase:'Middle', value:t.middle_median_lph},{phase:'Closing', value:t.closing_median_lph},{phase:'Final hour', value:t.final_hour_median_lph}
@@ -219,14 +221,14 @@ function renderBattles() {
   const pairs = state.battlePairs;
   const passes = state.passEvents;
   $('battles').innerHTML = `
-    <div class="section-header"><div><h2>Head-to-head battles</h2><p>Battle cards combine close-running time, lead switches, comeback signal and final result.</p></div></div>
-    <div class="grid cols-3">${cards.slice(0,12).map(b => `<div class="card"><h3>#${b.battle_rank} · ${escapeHtml(b.team_name_a)} v ${escapeHtml(b.team_name_b)}</h3><p>${escapeHtml(b.battle_card_narrative)}</p><div class="controls">${badge(`Score ${fmt(b.battle_score)}`)} ${badge(`${fmt(b.lead_switches,0)} switches`)} ${badge(escapeHtml(b.battle_class))}</div></div>`).join('')}</div>
-    <div class="section-header"><div><h2>Pair rankings</h2></div></div>
-    ${table(pairs.slice(0,40), [
+    <div class="section-header"><div><h2>Head-to-head battles</h2><p>Historical pair observations remain available, but battle scores and global ranks are not certified. Timing-boundary records are not verified passes.</p></div></div>
+    <div class="grid cols-3">${cards.slice().sort((a,b)=>a.battle_pair_key.localeCompare(b.battle_pair_key)).map(b => `<div class="card"><h3>${escapeHtml(b.team_name_a)} v ${escapeHtml(b.team_name_b)}</h3><p>${escapeHtml(b.battle_card_narrative)}</p><div class="controls">${badge(`Score ${b.battle_score === null ? "Not verified" : fmt(b.battle_score)}`)} ${badge(`${fmt(b.lead_switches,0)} switches`)} ${badge(escapeHtml(b.battle_class || 'Class not verified'))}</div></div>`).join('')}</div>
+    <div class="section-header"><div><h2>Pair comparisons (global rank blocked)</h2></div></div>
+    ${table(pairs.slice().sort((a,b)=>a.battle_pair_key.localeCompare(b.battle_pair_key)), [
       {label:'Rank', key:'battle_rank', render:r=>`<span class="rank">${fmt(r.battle_rank,0)}</span>`}, {label:'Pair', key:'battle_pair_key', render:r=>`${escapeHtml(r.team_name_a)} v ${escapeHtml(r.team_name_b)}`}, {label:'Winner', key:'final_pair_winner'}, {label:'Lead switches', key:'lead_switches', render:r=>fmt(r.lead_switches,0)}, {label:'Close %', key:'close_3_lap_pct', render:r=>pct(r.close_3_lap_pct,1)}, {label:'Battle score', key:'battle_score', render:r=>fmt(r.battle_score,1)}, {label:'Summary', key:'battle_summary'}
     ])}
-    <div class="section-header"><div><h2>Pass / lead-switch events</h2></div></div>
-    ${table(passes.slice(0,120), [
+    <div class="section-header"><div><h2>Historical pass candidates and timing-boundary observations</h2></div></div>
+    ${table(passes, [
       {label:'Clock', key:'race_clock_display'}, {label:'Passing', key:'passing_team_name'}, {label:'Passed', key:'passed_team_name'}, {label:'Context', key:'pass_context'}
     ])}`;
 }

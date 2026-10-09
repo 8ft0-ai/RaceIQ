@@ -594,6 +594,13 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true", help="Generate and print a summary without writing files.")
     args = parser.parse_args()
 
+    # A legacy generator must not reinstate scores whose shared denominator
+    # is explicitly blocked by the timing-integrity contract.
+    report_path = args.data_dir / "team_report_cards.json"
+    if report_path.exists():
+        existing = load_json(report_path)
+        if any(r.get("metric_status") == "blocked_shared_scoring_denominator" for r in existing):
+            raise SystemExit("Timing-integrity block active: legacy score regeneration is prohibited")
     rows, validation, debug_rows = generate(args.data_dir, args.generated_at)
 
     if args.dry_run:
