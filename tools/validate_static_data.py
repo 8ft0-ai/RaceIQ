@@ -279,6 +279,38 @@ def validate_team_report_cards() -> None:
     validate_team_report_card_validation_summary(rows)
 
 
+def validate_frozen_main_preservation() -> None:
+    """Require the exact approved blocked transform of immutable frozen inputs.
+
+    An already-blocked candidate is never its own source authority: its preserved
+    result, provenance and narrative fields must reproduce from frozen main.
+    This also protects fields not individually named by metric validators.
+    """
+    import subprocess
+    from block_timing_anomaly import BASELINE, TRANSFORMED_SOURCES, generate
+
+    try:
+        frozen = {
+            name: json.loads(subprocess.check_output(
+                ["git", "show", f"{BASELINE}:data/{name}.json"],
+                cwd=ROOT, stderr=subprocess.PIPE
+            ))
+            for name in TRANSFORMED_SOURCES
+        }
+        expected = generate(frozen)
+    except (subprocess.CalledProcessError, OSError, ValueError, KeyError) as exc:
+        raise AssertionError("Frozen-main preservation oracle unavailable: " + str(exc)) from exc
+    for name, approved in expected.items():
+        # Canonical serialisation compares JSON types as well as values:
+        # Python equality alone would wrongly equate 8, 8.0 and sometimes True.
+        actual_json = json.dumps(load_json(DATA / (name + ".json")),
+                                 sort_keys=True, ensure_ascii=False, allow_nan=False)
+        approved_json = json.dumps(approved, sort_keys=True,
+                                  ensure_ascii=False, allow_nan=False)
+        require(actual_json == approved_json,
+                f"Frozen-main preservation mismatch: {name}")
+
+
 def validate_timing_integrity() -> None:
     meta = load_json(DATA / "timing_anomaly_integrity.json")
     require(meta.get("contract") == "timing-anomaly-blocked-output/v2", "Missing canonical blocked-output contract")
@@ -420,6 +452,7 @@ def validate_timing_integrity() -> None:
     require(len(correction_stories) == 1 and
             "not a verified competitive gain" in correction_stories[0].get("details",""),
             "Snapshot-893 timing correction narrative missing or false")
+    validate_frozen_main_preservation()
 
 
 def main() -> int:

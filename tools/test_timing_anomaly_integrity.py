@@ -226,8 +226,8 @@ class ContractV2(unittest.TestCase):
         spec.loader.exec_module(module)
         names=("timing_anomaly_integrity","head_to_head_pairs","head_to_head_pass_events",
                "head_to_head_battle_cards","race_story_events","team_profiles",
-               "team_phase_summary","team_report_cards","race_overview",
-               "pit_delay_team_summary")
+               "team_phase_summary","team_report_cards","team_report_cards_validation",
+               "race_overview","pit_delay_team_summary")
         with tempfile.TemporaryDirectory() as tmp:
             dst=Path(tmp)
             for name in names:shutil.copy2(DATA/(name+".json"),dst/(name+".json"))
@@ -276,6 +276,85 @@ class ContractV2(unittest.TestCase):
             cwd=ROOT,capture_output=True,text=True)
         self.assertNotEqual(result.returncode,0)
         self.assertIn("regeneration is prohibited",result.stderr+result.stdout)
+
+    def test_v15_frozen_preservation_rejects_hostile_non_authorised_fields(self):
+        """Every transformed family rejects preserved-field tampering in both gates."""
+        spec = importlib.util.spec_from_file_location(
+            "raceiq_preservation_validator", ROOT / "tools/validate_static_data.py")
+        validator = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(validator)
+        hostile = [
+            ("pass identity", "head_to_head_pass_events",
+             lambda j: j[0].update(passing_team_name="Invented overtaker")),
+            ("car-73 pair final gap", "head_to_head_pairs",
+             lambda j: next(x for x in j if x["battle_pair_key"] == "01_vs_73")
+             .update(final_lap_gap_a_minus_b=-610)),
+            ("battle final winner", "head_to_head_battle_cards",
+             lambda j: next(x for x in j if x["battle_pair_key"] == "06_vs_73")
+             .update(final_pair_winner="Invented winner")),
+            ("story source provenance", "race_story_events",
+             lambda j: next(x for x in j if x["event_id"] == 237)
+             .update(source_table="invented_fact")),
+            ("raw best position", "team_profiles",
+             lambda j: next(x for x in j if x["car_no"] == 73)
+             .update(best_position=4)),
+            ("phase identity", "team_phase_summary",
+             lambda j: next(x for x in j if x["car_no"] == 73)
+             .update(phase="invented_phase")),
+            ("report story", "team_report_cards",
+             lambda j: next(x for x in j if x["car_no"] == 73)
+             ["summary_bullets"].append("Unverified passes presented as competitive.")),
+            ("report validation population", "team_report_cards_validation",
+             lambda j: j.update(row_count=24)),
+            ("overview result", "race_overview",
+             lambda j: j["podium"][0].update(final_laps=1010)),
+            ("delay source result", "pit_delay_team_summary",
+             lambda j: next(x for x in j if x["car_no"] == 73)
+             .update(final_laps=880)),
+            ("preserved integer type", "pit_delay_team_summary",
+             lambda j: next(x for x in j if x["car_no"] == 73)
+             .update(final_position=8.0)),
+            ("canonical provenance", "timing_anomaly_integrity",
+             lambda j: j.update(source_digest_normalisation="invented provenance")),
+            ("car-73 caveated narrative", "team_profiles",
+             lambda j: next(x for x in j if x["car_no"] == 73)
+             .update(profile_narrative="Five competitive overtakes verified.")),
+        ]
+        check_program = (
+            "import sys; from pathlib import Path; sys.path.insert(0, 'tools'); "
+            "import block_timing_anomaly as b; import validate_static_data as v; "
+            "b.DATA = v.DATA = Path(sys.argv[1]); "
+            "sys.argv = ['block_timing_anomaly.py', '--check']; b.main()"
+        )
+        with tempfile.TemporaryDirectory(prefix="raceiq-v15-frozen-") as tmp:
+            dst = Path(tmp) / "data"
+            shutil.copytree(DATA, dst)
+            validator.DATA = dst
+            for label, name, mutate in hostile:
+                with self.subTest(label=label, family=name):
+                    path = dst / (name + ".json")
+                    original = path.read_bytes()
+                    try:
+                        payload = json.loads(original)
+                        mutate(payload)
+                        self.assertNotEqual(
+                            json.dumps(payload, sort_keys=True),
+                            json.dumps(json.loads(original), sort_keys=True))
+                        path.write_text(json.dumps(payload), encoding="utf-8")
+                        with self.assertRaisesRegex(
+                            AssertionError, "Frozen-main preservation mismatch: " + name
+                        ):
+                            validator.validate_timing_integrity()
+                        result = subprocess.run(
+                            ["python3", "-c", check_program, str(dst)],
+                            cwd=ROOT, capture_output=True, text=True
+                        )
+                        self.assertNotEqual(result.returncode, 0, label)
+                        self.assertIn("Frozen-main preservation mismatch: " + name,
+                                      result.stderr + result.stdout)
+                        print(f"R01_NEGATIVE {label}: validator=REJECT --check=REJECT")
+                    finally:
+                        path.write_bytes(original)
 
     def test_publication_rename_failure_restores_exact_previous_data(self):
         spec = importlib.util.spec_from_file_location("blocking_preparer", ROOT / "tools/block_timing_anomaly.py")
