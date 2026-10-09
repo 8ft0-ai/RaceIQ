@@ -231,6 +231,8 @@ class ContractV2(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             dst=Path(tmp)
             for name in names:shutil.copy2(DATA/(name+".json"),dst/(name+".json"))
+            for name in module.FROZEN_PROTECTED:
+                shutil.copy2(DATA/(name+".json"),dst/(name+".json"))
             module.DATA=dst
             module.validate_timing_integrity()
             cases=[
@@ -355,6 +357,59 @@ class ContractV2(unittest.TestCase):
                         print(f"R01_NEGATIVE {label}: validator=REJECT --check=REJECT")
                     finally:
                         path.write_bytes(original)
+
+    def test_v15_common_mode_generator_drift_rejected_by_independent_oracle(self):
+        """A generator and data that agree on invented results must both fail."""
+        preparer_spec = importlib.util.spec_from_file_location(
+            "raceiq_common_mode_preparer", ROOT / "tools/block_timing_anomaly.py"
+        )
+        preparer = importlib.util.module_from_spec(preparer_spec)
+        preparer_spec.loader.exec_module(preparer)
+        validator_spec = importlib.util.spec_from_file_location(
+            "raceiq_common_mode_validator", ROOT / "tools/validate_static_data.py"
+        )
+        validator = importlib.util.module_from_spec(validator_spec)
+        validator_spec.loader.exec_module(validator)
+        genuine_generate = preparer.generate
+
+        def drifted_generate(source):
+            outputs = genuine_generate(source)
+            pair = next(row for row in outputs["head_to_head_pairs"]
+                        if row["battle_pair_key"] == "01_vs_73")
+            pair["final_lap_gap_a_minus_b"] = 123456
+            return outputs
+
+        original = next(row for row in baseline("head_to_head_pairs")
+                        if row["battle_pair_key"] == "01_vs_73")
+        self.assertEqual(original["final_lap_gap_a_minus_b"], -611)
+        with tempfile.TemporaryDirectory(prefix="raceiq-common-mode-") as tmp:
+            dst = Path(tmp) / "data"
+            shutil.copytree(DATA, dst)
+            outputs = drifted_generate({
+                name: baseline(name) for name in preparer.TRANSFORMED_SOURCES
+            })
+            pair_file = dst / "head_to_head_pairs.json"
+            pair_file.write_text(json.dumps(outputs["head_to_head_pairs"]), encoding="utf-8")
+            self.assertEqual(
+                next(row for row in json.loads(pair_file.read_text())
+                     if row["battle_pair_key"] == "01_vs_73")["final_lap_gap_a_minus_b"],
+                123456,
+            )
+            with mock.patch.dict("sys.modules", {"validate_static_data": validator}), \
+                 mock.patch.object(preparer, "generate", side_effect=drifted_generate), \
+                 mock.patch.object(preparer, "DATA", dst), \
+                 mock.patch.object(validator, "DATA", dst):
+                # No call to preparer.generate is made by this validator.
+                with self.assertRaisesRegex(
+                    AssertionError, "Frozen-main preservation mismatch: head_to_head_pairs"
+                ):
+                    validator.validate_timing_integrity()
+                with mock.patch("sys.argv", ["block_timing_anomaly.py", "--check"]):
+                    with self.assertRaisesRegex(
+                        AssertionError, "Frozen-main preservation mismatch: head_to_head_pairs"
+                    ):
+                        preparer.main()
+        print("R01_COMMON_MODE final_gap=-611->123456: validator=REJECT --check=REJECT")
 
     def test_publication_rename_failure_restores_exact_previous_data(self):
         spec = importlib.util.spec_from_file_location("blocking_preparer", ROOT / "tools/block_timing_anomaly.py")
