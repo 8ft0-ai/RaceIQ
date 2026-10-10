@@ -328,19 +328,31 @@ Approve after minor fixes
 Do not approve yet
 ```
 
-The user should not approve the PR until this groundedness review comment is present and any `Do not approve yet` items have been resolved or explicitly accepted.
+The owner must not authorise merge until this groundedness review comment is present and any `Do not approve yet` items have been resolved and independently re-reviewed. A groundedness recommendation is a technical judgement, **not** a GitHub `APPROVE` review, owner authorisation or merge permission.
 
 ## Gate 8 — Merge
 
 Before merge:
 
-- PR approval is recorded
-- required checks pass
-- unresolved review comments are addressed
-- target branch is still `main`
-- merge is understood as a GitHub Pages deployment trigger
+- An eligible GitHub reviewer has submitted formal approval **or** the documented solo-maintainer decision path below is satisfied. Do not claim that an author has approved their own PR.
+- Required checks pass for the exact current head SHA; validation and groundedness evidence are still applicable to that head.
+- Unresolved review threads and material review findings are addressed, and analytics caveats remain visible.
+- The target branch remains `main`, with the current base and final diff rechecked.
+- The owner explicitly authorises merging **this PR at this exact head SHA** in a dated, traceable PR comment after inspecting the technical review, validation evidence, remaining risks and deployment consequence. Technical review alone never grants merge authority.
+- Merge is understood as a GitHub Pages deployment trigger; separate merge/deployment action is not implied by authorisation.
 
-Branch protection for `main` is recommended so this gate cannot be bypassed accidentally. Repository settings may need to be configured manually.
+### Solo-maintainer equivalent for formal PR approval
+
+For a genuinely solo-maintained repository when the PR author is the only available maintainer, GitHub does **not** allow author self-approval. The owner may instead use a *documented owner merge decision* as the human judgement gate, provided:
+
+1. A genuinely fresh technical/groundedness review has been recorded against the exact head and base, addressing both 'Did we do what was needed?' and 'Did we only do what was asked?', with an eligible positive recommendation and no unresolved material blockers.
+2. All applicable mechanical, local/browser, analytics-truth, caveat and review-thread gates have been completed and their evidence remains valid for the exact head. Unknown or failed mandatory checks mean **HOLD**.
+3. The owner records an explicit dated decision on the PR identifying the head SHA, independent-review evidence, CI status, known caveats, current branch protection/ruleset status and acceptance of the GitHub Pages deployment consequence. This is **not** a formal GitHub `APPROVE` event.
+4. Any GitHub branch-protection/ruleset requirement for approving reviews must actually be satisfied. If GitHub still requires a distinct reviewer, **HOLD** until an eligible reviewer approves or a separately reviewed and authorised settings change takes effect; do not use administrator bypass as a substitute for the required decision.
+
+The solo route does not reduce scrutiny or create a default exception for uncertain scoring, data correctness, missing browser evidence or changed code. A new head, altered base or material evidence change requires re-evaluation. If another eligible reviewer is available, retain normal GitHub review where required.
+
+Branch protection for `main` is recommended. A documentation change does not modify GitHub settings, override required reviewers or authorise a merge; verify live settings separately.
 
 ## Gate 9 — Post-merge
 
@@ -357,7 +369,8 @@ After merge:
 ```text
 Assistant / Codex: prepares issue intake check, implementation plan, branch, PR, validation evidence and groundedness review
 GitHub Actions: enforces mechanical checks
-Reviewer / user: approves judgement gates and merge
+Reviewer: provides independent technical judgement and, when eligible, formal GitHub approval
+Owner / sole maintainer: explicitly authorises a specific reviewed SHA for merge; in solo mode records the equivalent owner decision without pretending it is GitHub approval
 GitHub branch protection: prevents bypassing the process
 ```
 

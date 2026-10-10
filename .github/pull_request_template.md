@@ -106,11 +106,21 @@ Pending browser validation note, if applicable:
 
 ## Merge / deployment gate
 
-- [ ] PR has been approved
-- [ ] Required checks are passing
+Select and evidence exactly one human approval route (a technical groundedness `Approve` recommendation does not itself authorise merge):
+
+- [ ] Eligible non-author GitHub reviewer has submitted formal `APPROVE` (review URL and head SHA):
+- [ ] Solo-maintainer route under `docs/DELIVERY_GATES.md`: no eligible distinct reviewer; fresh independent groundedness review is positive for the exact head/base; explicit owner merge-authorisation comment records exact head SHA, dated decision, evidence, caveats and deployment consequence (comment URL):
+- [ ] Current GitHub branch-protection/ruleset review requirements are satisfied. If they require an eligible formal review, HOLD until review or a separately authorised and effective settings change; documentation and owner comments cannot bypass rules.
+- [ ] Required checks are passing for the current exact head SHA (run URLs):
+- [ ] Analytics truth, caveats and local/browser evidence are complete and still applicable to this head; no unresolved material HOLD items
 - [ ] No unresolved review comments remain
-- [ ] Target branch is `main`
+- [ ] Target branch is `main`; current base/head and final diff have been checked
+- [ ] Owner has explicitly authorised merging this exact SHA; technical approval alone is insufficient
 - [ ] Merge is understood as a GitHub Pages deployment trigger
+
+Evidence: head SHA / frozen or current base SHA / independent groundedness comment / owner decision / live branch rules / CI runs / remaining caveats:
+
+- 
 
 ## Post-merge follow-up
 
