@@ -60,7 +60,7 @@
     const box = document.createElement('div');
     box.className = 'detail-box';
     box.dataset.reportCardReliability = 'true';
-    box.innerHTML = `<strong>Reliability</strong><p>${escapeHtml(fmt(profile.race_reliability_score, 1))}/100 · Team Profiles metric, shown here for cross-tab reference</p>`;
+    box.innerHTML = `<strong>Reliability</strong><p>${profile.race_reliability_score === null ? "Not verified" : escapeHtml(fmt(profile.race_reliability_score, 1))+"/100"} · Team Profiles metric, shown here for cross-tab reference</p>`;
     facts.insertBefore(box, facts.children[2] || null);
   }
 

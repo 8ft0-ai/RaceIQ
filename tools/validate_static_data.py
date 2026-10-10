@@ -96,9 +96,9 @@ def load_json(path: Path) -> Any:
         with path.open(encoding="utf-8") as handle:
             return json.load(handle)
     except FileNotFoundError:
-        raise AssertionError(f"Missing required file: {path.relative_to(ROOT)}")
+        raise AssertionError(f"Missing required file: {path}")
     except json.JSONDecodeError as exc:
-        raise AssertionError(f"Invalid JSON in {path.relative_to(ROOT)}: {exc}") from exc
+        raise AssertionError(f"Invalid JSON in {path}: {exc}") from exc
 
 
 def require(condition: bool, message: str) -> None:
@@ -171,8 +171,13 @@ def validate_team_report_card_validation_summary(rows: list[dict[str, Any]]) -> 
         "team_report_cards_validation final_standing_team_count does not match standings.json",
     )
     require(summary.get("one_card_per_final_team") is True, "team_report_cards_validation must confirm one card per final team")
-    require(summary.get("score_bounds_ok") is True, "team_report_cards_validation must confirm score bounds")
-    require(summary.get("validation_status") == "pass", "team_report_cards_validation validation_status must be pass")
+    if summary.get("validation_status") == "pass_with_blocked_analytics":
+        require(summary.get("blocked_score_count") == len(rows), "All dependent scores must be blocked")
+        require(summary.get("score_bounds_ok") is None, "Blocked scoring cannot claim numeric score bounds")
+        require(not summary.get("top_report_cards"), "Blocked scoring must not publish top scorers")
+    else:
+        require(summary.get("score_bounds_ok") is True, "team_report_cards_validation must confirm score bounds")
+        require(summary.get("validation_status") == "pass", "team_report_cards_validation validation_status must be pass")
 
     required_fields = summary.get("required_fields")
     require(isinstance(required_fields, list), "team_report_cards_validation required_fields must be a list")
@@ -228,9 +233,17 @@ def validate_team_report_cards() -> None:
         require(not missing, f"team_report_card row for {team_name} missing fields: {missing}")
 
         score = row.get("report_card_score")
-        require(isinstance(score, (int, float)), f"report_card_score must be numeric for {team_name}")
-        require(0 <= score <= 100, f"report_card_score out of bounds for {team_name}: {score}")
-        require(row.get("report_card_grade") in {"A+", "A", "B", "C", "D", "E"}, f"Invalid grade for {team_name}")
+        if row.get("metric_status") == "blocked_shared_scoring_denominator":
+            require(score is None and row.get("report_card_grade") is None,
+                    f"Blocked score and grade must both be null for {team_name}")
+            require(isinstance(row.get("blocked_reason"), str) and row["blocked_reason"],
+                    f"Missing blocked reason for {team_name}")
+        else:
+            require(isinstance(score, (int, float)) and not isinstance(score, bool),
+                    f"report_card_score must be numeric for {team_name}")
+            require(0 <= score <= 100, f"report_card_score out of bounds for {team_name}: {score}")
+            require(row.get("report_card_grade") in {"A+", "A", "B", "C", "D", "E"},
+                    f"Invalid grade for {team_name}")
         require(isinstance(row.get("summary_bullets"), list), f"summary_bullets must be a list for {team_name}")
         require("places_gained" in row and "places_gained_from_first_observed" in row, "Grid and first-observed movement must remain separate")
 
@@ -266,11 +279,356 @@ def validate_team_report_cards() -> None:
     validate_team_report_card_validation_summary(rows)
 
 
+# Authorised differences from frozen main at Contract V2 candidate b6274ed.
+# This policy is deliberately independent of block_timing_anomaly.generate().
+# Digests bind the exact *approved field-level changes*, not just allowed names.
+# They must never be regenerated from a candidate automatically: any changed
+# delta or policy requires a new human/independent review.
+FROZEN_MAIN = "7addbd39774f2ab5a59be7bd42c9e6d9cdcf65ab"
+FROZEN_PROTECTED = (
+    "standings", "grid_to_finish", "grid_to_finish_validation", "pit_delay_events",
+    "known_incidents", "anomaly_review_board", "race_replay_snapshot_summary",
+    "replay_traces_top12",
+)
+FROZEN_APPROVED_DELTAS = {
+    "head_to_head_pass_events": "c3cf514a2fd1f8b4358d77d74b42c30d29f57d66ed2d906239a1d782b80e1447",
+    "head_to_head_pairs": "0eabacc50fc95eb17236a8bf75b0336fa9b76aa853abeb35e04078ba243538ac",
+    "head_to_head_battle_cards": "e8e86790252a02a9b21f9869a1caadcf66be899b134e7542d330cb34b104894f",
+    "race_story_events": "a06b851f24ddd3ad548b993d1fd1d89dfd5eb400481864a3e49a32d2589c8874",
+    "team_profiles": "a6c75e9b1a517c06c560cb2c31bcd027573c4782590f25f57d6b7ef9dd802863",
+    "team_phase_summary": "164f0e8dc457328f7c7329508a739c426b920c81757c2b317f66db0da0f32498",
+    "team_report_cards": "4a126488dfd880ebc8e5c40f6ca7367c12266eec74027793743322e11809fbd6",
+    "team_report_cards_validation": "f21dbe7a2b23cfce9dc688733669207f86742e405e36f9af64b59afbdc0a611f",
+    "race_overview": "e2ad2e9962e5e2f814a30adfafe34c838a86581b7dbd5f99162756a5c9ede39a",
+    "pit_delay_team_summary": "1de097b8f82c5dbc51d2f02f8aef64baa2436bc47e9f6b0cb7062b0555b2d916",
+}
+FROZEN_CANONICAL_SHA256 = "e9497da888189992e8ffb812ef90efc1aef1a5743cd5fc94baa2eeaabcd2b849"
+
+FROZEN_PAIR_METRICS = {
+    "observed_battle_display", "a_ahead_pct", "b_ahead_pct",
+    "close_3_lap_seconds", "close_3_lap_pct", "lead_switches",
+    "winner_trailed_pct", "max_lap_deficit_overcome_by_winner",
+    "comeback_flag", "decisive_pass_race_clock", "decisive_pass_team_name",
+    "battle_summary",
+}
+FROZEN_CARD_METRICS = {
+    "lead_switches", "close_3_lap_seconds", "close_3_lap_pct",
+    "winner_trailed_pct", "max_lap_deficit_overcome_by_winner",
+    "decisive_pass_race_clock", "why_it_matters", "battle_card_narrative",
+}
+FROZEN_PROFILE_METRICS = {
+    "median_clean_lph", "mean_clean_lph", "best_5min_clean_lph",
+    "worst_5min_clean_lph", "pace_consistency_score", "race_reliability_score",
+    "delay_adjusted_pace_index", "opening_median_lph", "middle_median_lph",
+    "closing_median_lph", "final_hour_median_lph", "final_hour_vs_overall_lph",
+    "clean_window_count", "delay_or_no_progress_window_count",
+    "pace_profile_type", "total_delay_display", "delay_event_count",
+    "max_delay_display", "delay_minutes_per_capture_hour",
+    "pace_confidence", "pace_profile_interpretation_note",
+    "position_changes_status", "position_extremes_status", "profile_headline",
+    "metric_status", "blocked_reason",
+}
+FROZEN_PHASE_METRICS = {
+    "window_count", "lap_gain_sum", "median_lap_rate_lph", "mean_lap_rate_lph",
+    "p25_lap_rate_lph", "p75_lap_rate_lph", "best_lap_rate_lph",
+    "worst_lap_rate_lph", "metric_status", "blocked_reason",
+}
+FROZEN_REPORT_METRICS = {
+    "median_clean_lph", "consistency_score", "pace_label", "best_phase",
+    "headline", "confidence_reasons", "delay_profile", "estimated_laps_lost",
+}
+FROZEN_SHARED_BATTLE = {
+    "battle_rank", "rank_status", "battle_score", "battle_class",
+    "battle_shape", "score_status",
+}
+
+
+def frozen_json(value: Any) -> str:
+    # Canonical JSON catches integer/float/bool substitution and nested changes.
+    return json.dumps(value, sort_keys=True, separators=(",", ":"),
+                      ensure_ascii=False, allow_nan=False)
+
+
+def frozen_row_id(name: str, row: dict) -> Any:
+    key = {
+        "head_to_head_pass_events": "pass_event_id",
+        "head_to_head_pairs": "battle_pair_key",
+        "head_to_head_battle_cards": "battle_pair_key",
+        "race_story_events": "event_id",
+        "team_profiles": "car_no",
+        "team_report_cards": "car_no",
+        "pit_delay_team_summary": "car_no",
+    }
+    if name == "team_phase_summary":
+        return (row["car_no"], row["phase"])
+    return row[key[name]]
+
+
+def frozen_allowed_fields(name: str, original: dict) -> set[str]:
+    """Fixed approval scope, based on original identity, never candidate data."""
+    if name == "head_to_head_pass_events":
+        affected = "73" in original["battle_pair_key"].split("_vs_")
+        boundary = 83 <= original["snapshot_id"] <= 112 or original["snapshot_id"] in (893, 894)
+        return {"competitive_status", "pass_context"} if affected and boundary else set()
+    if name in ("head_to_head_pairs", "head_to_head_battle_cards"):
+        fields = set(FROZEN_SHARED_BATTLE)
+        if 73 in (original["car_no_a"], original["car_no_b"]):
+            fields |= {"metric_status", "blocked_reason"}
+            fields |= FROZEN_PAIR_METRICS if name == "head_to_head_pairs" else FROZEN_CARD_METRICS
+            if name == "head_to_head_pairs":
+                side = "a" if original["car_no_a"] == 73 else "b"
+                fields.add("median_clean_lph_" + side)
+        return fields
+    if name == "race_story_events":
+        return {"event_type", "severity", "title", "details", "competitive_status"} if (
+            original["event_id"] == 237 and original["snapshot_id"] == 893 and
+            original["car_no"] == 73
+        ) else set()
+    if name == "team_profiles":
+        fields = {"rank_median_clean_pace", "rank_consistency",
+                  "rank_final_hour_pace", "rank_strongest_finish",
+                  "rank_status", "profile_narrative"}
+        return fields | FROZEN_PROFILE_METRICS if original["car_no"] == 73 else fields
+    if name == "team_phase_summary":
+        return FROZEN_PHASE_METRICS if original["car_no"] == 73 else set()
+    if name == "team_report_cards":
+        fields = {"report_card_score", "report_card_grade", "metric_status",
+                  "blocked_reason", "interpretation_caveats"}
+        if "Ostrov Team" in (original.get("key_battle") or ""):
+            fields.add("key_battle")
+        if original["car_no"] == 73:
+            fields |= FROZEN_REPORT_METRICS | {"key_battle"}
+        return fields
+    if name == "team_report_cards_validation":
+        return {"score_bounds_ok", "grade_distribution", "top_report_cards",
+                "validation_status", "blocked_score_count", "blocked_metric_reason"}
+    if name == "race_overview":
+        return {"top_battles", "top_pace", "top_battles_status", "top_pace_status"}
+    if name == "pit_delay_team_summary":
+        return {"median_clean_lph", "pace_profile_type", "pace_status"} if original["car_no"] == 73 else set()
+    raise AssertionError("Unrecognised frozen-main family: " + name)
+
+
+def validate_frozen_main_preservation() -> None:
+    """Source-grounded, fail-closed field authority; no generator dependency.
+
+    Compare every frozen row and field (including nested values/types) and
+    require each permitted delta to match its independently pinned digest.
+    Pair/card order may change only to the approved pair-key sorting.
+    """
+    import hashlib
+    import subprocess
+
+    def frozen_source(name: str) -> Any:
+        try:
+            raw = subprocess.check_output(
+                ["git", "show", f"{FROZEN_MAIN}:data/{name}.json"],
+                cwd=ROOT, stderr=subprocess.PIPE
+            )
+            return json.loads(raw)
+        except (subprocess.CalledProcessError, OSError, ValueError) as exc:
+            raise AssertionError("Frozen-main preservation oracle unavailable: " + name) from exc
+
+    for name in FROZEN_PROTECTED:
+        require(frozen_json(load_json(DATA / (name + ".json"))) ==
+                frozen_json(frozen_source(name)),
+                "Frozen-main preservation mismatch: " + name)
+
+    for name, digest in FROZEN_APPROVED_DELTAS.items():
+        before = frozen_source(name)
+        after = load_json(DATA / (name + ".json"))
+        is_object = name in ("team_report_cards_validation", "race_overview")
+        require(isinstance(before, dict if is_object else list) and
+                isinstance(after, dict if is_object else list),
+                "Frozen-main preservation mismatch: " + name)
+        if is_object:
+            original_rows = [("$root", before)]
+            candidate_rows = [("$root", after)]
+        else:
+            original_rows = [(frozen_row_id(name, row), row) for row in before]
+            candidate_rows = [(frozen_row_id(name, row), row) for row in after]
+            if name in ("head_to_head_pairs", "head_to_head_battle_cards"):
+                original_rows.sort(key=lambda item: item[0])
+            # Other families retain source order. Identity and duplicate checks
+            # below also catch removed/replaced rows and swapped identities.
+        original_ids = [ident for ident, _ in original_rows]
+        candidate_ids = [ident for ident, _ in candidate_rows]
+        require(candidate_ids == original_ids and len(set(map(str, original_ids))) == len(original_ids),
+                "Frozen-main preservation mismatch: " + name + " row identities/order")
+        changes = []
+        for (ident, old), (_, new) in zip(original_rows, candidate_rows):
+            allowed = frozen_allowed_fields(name, old)
+            for field in sorted(old.keys() | new.keys()):
+                old_present, new_present = field in old, field in new
+                if old_present and new_present and frozen_json(old[field]) == frozen_json(new[field]):
+                    continue
+                require(field in allowed,
+                        "Frozen-main preservation mismatch: " + name + " field " + field)
+                changes.append([
+                    ident, field,
+                    {"present": old_present, "value": old.get(field)},
+                    {"present": new_present, "value": new.get(field)},
+                ])
+        actual_digest = hashlib.sha256(frozen_json(changes).encode("utf-8")).hexdigest()
+        require(actual_digest == digest,
+                "Frozen-main preservation mismatch: " + name + " approved delta")
+
+    canonical = load_json(DATA / "timing_anomaly_integrity.json")
+    actual_digest = hashlib.sha256(frozen_json(canonical).encode("utf-8")).hexdigest()
+    require(actual_digest == FROZEN_CANONICAL_SHA256,
+            "Frozen-main preservation mismatch: timing_anomaly_integrity")
+
+
+def validate_timing_integrity() -> None:
+    meta = load_json(DATA / "timing_anomaly_integrity.json")
+    require(meta.get("contract") == "timing-anomaly-blocked-output/v2", "Missing canonical blocked-output contract")
+    require(meta.get("source_main") == "7addbd39774f2ab5a59be7bd42c9e6d9cdcf65ab",
+            "Unexpected frozen source authority")
+    require(meta.get("collector_archive_sha256") == "e1a0c0717b8df1548375f96afabc507040156a783005c944d73b2136dd3ac253",
+            "Unexpected collector archive identity")
+    require(meta.get("canonical_observation_count") == 27550 and
+            meta.get("canonical_snapshot_observations_sha256") ==
+            "82e6afd8e7828f51bf7d637d30a132e0813921f249453e33cf00f5a1f094c02c",
+            "Unexpected snapshot source fingerprint")
+    boundaries = {r["snapshot"]: (r["lap"], r["position"], r["role"])
+                  for r in meta.get("boundary_states", [])}
+    require(boundaries.get(112) == (142, 7, "fresh_baseline_no_pass") and
+            boundaries.get(893) == (736, 7, "correction_ineligible") and
+            boundaries.get(894) == (737, 7, "fresh_baseline_no_pass") and
+            boundaries.get(895) == (737, 7, "candidate_subsequent_comparison"),
+            "Incorrect invalid/rebaseline boundary semantics")
+    pairs = load_json(DATA / "head_to_head_pairs.json")
+    passes = load_json(DATA / "head_to_head_pass_events.json")
+    cards = load_json(DATA / "head_to_head_battle_cards.json")
+    stories = load_json(DATA / "race_story_events.json")
+    reports = load_json(DATA / "team_report_cards.json")
+    profiles = load_json(DATA / "team_profiles.json")
+    phases = load_json(DATA / "team_phase_summary.json")
+    overview = load_json(DATA / "race_overview.json")
+    delay_summary = load_json(DATA / "pit_delay_team_summary.json")
+    delay_rows = [d for d in delay_summary if d.get("car_no") == 73]
+    require(len(delay_rows)==1,"Missing car-73 delay summary")
+    delay = delay_rows[0]
+    require(delay.get("event_count_total")==13 and
+            delay.get("delay_burden_event_count")==8 and
+            delay.get("estimated_laps_lost_total")==31.6 and
+            delay.get("total_excess_delay_display")=="13:30",
+            "Verified car-73 delay values changed")
+    require(delay.get("median_clean_lph") is None and
+            delay.get("pace_profile_type") is None and
+            delay.get("pace_status")=="blocked_timing_anomaly_lineage",
+            "Unverified pace leaked through delay summary")
+    suspect = {152,153,155,156,157,158,159,160,161,335,336}
+    require(len(pairs) == 300, "Expected 300 battle pairs")
+    affected_keys = sorted(p["battle_pair_key"] for p in pairs
+                           if 73 in (p["car_no_a"], p["car_no_b"]))
+    require(len(affected_keys) == 24 and
+            affected_keys == meta.get("affected_pair_keys"), "Expected exact 24-pair inventory")
+    require(meta.get("suspect_pass_event_ids") == sorted(suspect), "Expected exact 11-event inventory")
+    require(all(p.get("battle_rank") is None and p.get("rank_status") == "blocked_global_battle_rank_denominator" for p in pairs),
+            "Global battle rank must remain blocked")
+    require(all(p.get("battle_score") is None and p.get("battle_class") is None
+                and p.get("score_status") == "blocked_shared_battle_score_denominator" for p in pairs),
+            "Global battle score or class leaked")
+    require([p["battle_pair_key"] for p in pairs] ==
+            sorted(p["battle_pair_key"] for p in pairs), "Battle pair order leaks legacy ranking")
+    for p in pairs:
+        if 73 in (p["car_no_a"],p["car_no_b"]):
+            require(p.get("metric_status") == "blocked_timing_anomaly_lineage", "Affected pair missing blocked disposition")
+            for f in ("observed_battle_display", "a_ahead_pct", "b_ahead_pct",
+                      "close_3_lap_seconds", "close_3_lap_pct", "lead_switches",
+                      "winner_trailed_pct", "max_lap_deficit_overcome_by_winner",
+                      "comeback_flag", "decisive_pass_race_clock",
+                      "decisive_pass_team_name", "battle_score", "battle_class",
+                      "battle_shape", "battle_summary"):
+                require(p.get(f) is None, f"Affected pair leaks {f}: {p['battle_pair_key']}")
+            side = "a" if p["car_no_a"] == 73 else "b"
+            require(p.get("median_clean_lph_" + side) is None,
+                    "Affected pair leaks car-73 clean pace")
+    require(len([p for p in passes if p["pass_event_id"] in suspect]) == 11, "Missing suspect passes")
+    for p in passes:
+        car73 = "73" in p["battle_pair_key"].split("_vs_")
+        timing_boundary = car73 and (83 <= p["snapshot_id"] <= 112 or
+                                     p["snapshot_id"] in (893, 894))
+        if p["pass_event_id"] in suspect or timing_boundary:
+            require(p.get("competitive_status") == "blocked_timing_anomaly_lineage",
+                    f"Timing-affected pass not blocked: {p['pass_event_id']}")
+    require(all(c.get("battle_rank") is None and c.get("battle_score") is None and
+                c.get("battle_class") is None for c in cards), "Battle cards leak global score or rank")
+    require([c["battle_pair_key"] for c in cards] ==
+            sorted(c["battle_pair_key"] for c in cards), "Battle card order leaks legacy ranking")
+    for c in cards:
+        if 73 in (c["car_no_a"],c["car_no_b"]):
+            require(c.get("metric_status") == "blocked_timing_anomaly_lineage",
+                    "Affected card missing blocked disposition")
+            for f in ("battle_score", "battle_class", "battle_shape", "lead_switches",
+                      "close_3_lap_seconds", "close_3_lap_pct", "winner_trailed_pct",
+                      "max_lap_deficit_overcome_by_winner",
+                      "decisive_pass_race_clock", "why_it_matters"):
+                require(c.get(f) is None, f"Affected battle card leaks {f}")
+            require("blocked" in c.get("battle_card_narrative", "").lower(),
+                    "Affected card narrative fails to disclose blocked competitive claim")
+    require(not overview.get("top_battles"), "Overview leaks historical top battles")
+    require(not overview.get("top_pace"), "Overview leaks uncertified top-pace selection")
+    require(overview.get("top_pace_status") == "blocked_shared_pace_rank_denominator",
+            "Overview pace-rank status is not blocked")
+    require(overview.get("top_battles_status") == "blocked_global_battle_rank_denominator", "Missing overview blocked status")
+    require(len(reports) == 25 and all(r.get("report_card_score") is None and r.get("report_card_grade") is None and
+            r.get("metric_status") == "blocked_shared_scoring_denominator" for r in reports),
+            "Report-card shared denominator leaks score or grade")
+    require(all("Ostrov Team" not in (r.get("key_battle") or "") for r in reports),
+            "Affected reciprocal report-card key battle leaked")
+    affected_profiles = [p for p in profiles if p["car_no"] == 73]
+    require(len(affected_profiles) == 1 and affected_profiles[0].get("median_clean_lph") is None,
+            "Car-73 pace not blocked")
+    require(all(all(p.get(f) is None for f in ("rank_median_clean_pace", "rank_consistency",
+                    "rank_final_hour_pace", "rank_strongest_finish")) and
+                "Ranked " not in (p.get("profile_narrative") or "") for p in profiles),
+            "Pace global rank or narrative leaked")
+    car73_phases = [p for p in phases if p["car_no"] == 73]
+    require(len(car73_phases) == 4, "Car-73 phase count changed")
+    for p in car73_phases:
+        for f in ("window_count", "lap_gain_sum", "median_lap_rate_lph",
+                  "mean_lap_rate_lph", "p25_lap_rate_lph", "p75_lap_rate_lph",
+                  "best_lap_rate_lph", "worst_lap_rate_lph"):
+            require(p.get(f) is None, f"Car-73 phase leaks {f}")
+    car73 = affected_profiles[0]
+    require(car73.get("position_changes")==40 and car73.get("worst_position")==25 and
+            car73.get("position_changes_status")=="raw_observed_only_not_verified_competitive",
+            "Raw observed position volatility changed or falsely certified")
+    for field in ("median_clean_lph", "mean_clean_lph", "best_5min_clean_lph",
+                  "worst_5min_clean_lph", "pace_consistency_score", "race_reliability_score",
+                  "delay_adjusted_pace_index", "opening_median_lph", "middle_median_lph",
+                  "closing_median_lph", "final_hour_median_lph", "final_hour_vs_overall_lph",
+                  "clean_window_count", "delay_or_no_progress_window_count",
+                  "pace_profile_type", "total_delay_display", "delay_event_count",
+                  "max_delay_display", "delay_minutes_per_capture_hour",
+                  "rank_median_clean_pace", "rank_consistency",
+                  "rank_final_hour_pace", "rank_strongest_finish"):
+        require(car73.get(field) is None, f"Car-73 profile leaks {field}")
+    car73_reports = [r for r in reports if r.get("car_no") == 73]
+    require(len(car73_reports) == 1, "Car-73 report count changed")
+    for field in ("median_clean_lph", "consistency_score", "pace_label", "best_phase",
+                  "key_battle", "delay_profile", "estimated_laps_lost"):
+        require(car73_reports[0].get(field) is None, f"Car-73 report leaks {field}")
+    bad_stories = [e for e in stories if e.get("snapshot_id")==893 and e.get("car_no")==73 and
+                   e.get("event_type")=="position_gained"]
+    require(not bad_stories, "Snapshot-893 story leaks unsupported competitive gain")
+    correction_stories = [e for e in stories if e.get("event_id") == 237 and
+                          e.get("snapshot_id") == 893 and e.get("car_no") == 73 and
+                          e.get("event_type") == "timing_correction_observed"]
+    require(len(correction_stories) == 1 and
+            "not a verified competitive gain" in correction_stories[0].get("details",""),
+            "Snapshot-893 timing correction narrative missing or false")
+    validate_frozen_main_preservation()
+
+
 def main() -> int:
     try:
         validate_required_files()
         validate_grid_to_finish()
         validate_team_report_cards()
+        validate_timing_integrity()
     except AssertionError as exc:
         print(f"Validation failed: {exc}", file=sys.stderr)
         return 1

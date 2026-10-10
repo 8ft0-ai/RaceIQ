@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Offline blocked-data integrity checks pin an ancestor commit
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -28,11 +30,15 @@ jobs:
           if [ -f data/team_report_cards.json ]; then python -m json.tool data/team_report_cards.json > /dev/null; fi
           if [ -f data/team_report_cards_validation.json ]; then python -m json.tool data/team_report_cards_validation.json > /dev/null; fi
 
-      - name: Run Team Report Card generator dry run
-        run: python tools/generate_team_report_cards.py --dry-run
-
-      - name: Generate Team Report Card outputs
-        run: python tools/generate_team_report_cards.py
+      - name: Check blocked analytics or regenerate legacy report cards
+        run: |
+          if [ -f data/timing_anomaly_integrity.json ]; then
+            # Fail closed: do not reinstate scores blocked by the source authority.
+            python tools/block_timing_anomaly.py --check
+          else
+            python tools/generate_team_report_cards.py --dry-run
+            python tools/generate_team_report_cards.py
+          fi
 
       - name: Validate generated static data
         run: python tools/validate_static_data.py
@@ -40,5 +46,5 @@ jobs:
       - name: Run RaceIQ static app smoke validator
         run: python tools/validate_static_app.py
 
-      - name: Verify Team Report Card generator reproduces committed output
-        run: git diff --exit-code -- data/team_report_cards.json data/team_report_cards_validation.json
+      - name: Verify prepared JSON remains deterministic
+        run: git diff --exit-code -- data/

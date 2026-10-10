@@ -33,6 +33,7 @@
   }
 
   function scoreClass(score) {
+    if (score === null || score === undefined) return 'neutral';
     const n = Number(score);
     if (!Number.isFinite(n)) return 'neutral';
     if (n >= 80) return 'good';
@@ -44,6 +45,7 @@
     const g = String(grade || '').toUpperCase();
     if (g === 'A+' || g === 'A' || g === 'B') return 'good';
     if (g === 'C' || g === 'D') return 'warn';
+    if (!g) return 'neutral';
     return 'bad';
   }
 
@@ -111,7 +113,7 @@
   }
 
   function teamOptionLabel(team) {
-    return `${team.final_position}. ${team.team_name} · ${team.report_card_grade || '—'} · ${fmt(team.report_card_score, 1)}`;
+    return `${team.final_position}. ${team.team_name} · ${team.report_card_score === null ? 'RaceIQ not verified' : fmt(team.report_card_score, 1)}`;
   }
 
   function renderSummaryBullets(team) {
@@ -157,17 +159,17 @@
           <h2>${escapeHtml(team.team_name)}</h2>
           <p>${escapeHtml(team.headline || 'No headline available.')}</p>
           <div class="controls">
-            ${badge(`Grade ${team.report_card_grade || '—'}`, gradeClass(team.report_card_grade))}
-            ${badge(`RaceIQ ${fmt(team.report_card_score, 1)}/100`, scoreClass(team.report_card_score))}
+            ${badge(`Grade ${team.report_card_grade || 'Not verified'}`, gradeClass(team.report_card_grade))}
+            ${badge(`RaceIQ ${team.report_card_score === null ? "Not verified" : fmt(team.report_card_score, 1)+"/100"}`, scoreClass(team.report_card_score))}
             ${badge(`Final P${fmt(team.final_position, 0)}`)}
             ${badge(`${fmt(team.final_laps, 0)} laps`)}
             ${badge(`Confidence ${confidence}`, confidenceClass(confidence))}
           </div>
         </div>
         <div class="grade-tile ${gradeClass(team.report_card_grade)}">
-          <div class="grade-value">${escapeHtml(team.report_card_grade || '—')}</div>
+          <div class="grade-value">${escapeHtml(team.report_card_grade || 'Not verified')}</div>
           <div class="metric-label">RaceIQ grade</div>
-          <div class="grade-score">${fmt(team.report_card_score, 1)}/100</div>
+          <div class="grade-score">${team.report_card_score === null ? "Not verified" : fmt(team.report_card_score, 1)+"/100"}</div>
         </div>
       </div>
       <div class="kpi-row report-kpis">
@@ -185,8 +187,8 @@
           ${renderCaveats(team)}
         </div>
         <div class="report-facts">
-          <div class="detail-box"><strong>Pace profile</strong><p>${escapeHtml(team.pace_label || '—')} · ${fmt(team.median_clean_lph, 1)} clean lph</p></div>
-          <div class="detail-box"><strong>Consistency</strong><p>${fmt(team.consistency_score, 1)}/100</p></div>
+          <div class="detail-box"><strong>Pace profile</strong><p>${escapeHtml(team.pace_label || '—')} · ${team.median_clean_lph === null ? "Not verified" : fmt(team.median_clean_lph, 1)+" clean lph"}</p></div>
+          <div class="detail-box"><strong>Consistency</strong><p>${team.consistency_score === null ? "Not verified" : fmt(team.consistency_score, 1)+"/100"}</p></div>
           <div class="detail-box"><strong>Best phase</strong><p>${escapeHtml(team.best_phase || '—')}</p></div>
           <div class="detail-box"><strong>Key battle</strong><p>${escapeHtml(team.key_battle || '—')}</p></div>
           <div class="detail-box"><strong>Confidence</strong><p>${escapeHtml(confidence)} · see reasons and caveats in the race story panel</p></div>
@@ -199,11 +201,13 @@
     const teams = (teamReportCards || []).slice().sort((a, b) => Number(a.final_position) - Number(b.final_position));
     if (!teams.length) return '<div class="notice"><p>No team report cards available.</p></div>';
 
-    const bestScore = teams.slice().sort((a,b)=>Number(b.report_card_score || 0)-Number(a.report_card_score || 0))[0];
+    const scored = teams.filter(t => typeof t.report_card_score === 'number' && Number.isFinite(t.report_card_score));
+
+    const bestScore = scored.slice().sort((a,b)=>b.report_card_score-a.report_card_score)[0];
     const winner = teams.find(t => Number(t.final_position) === 1) || teams[0];
     const bestRecovery = teams.slice().sort((a,b)=>Number(b.places_gained || 0)-Number(a.places_gained || 0))[0];
     const caveatedTeams = teams.filter(t => (t.known_incident_status && t.known_incident_status !== 'none') || (t.anomaly_status && t.anomaly_status !== 'none')).length;
-    const avgScore = teams.reduce((sum, t) => sum + (Number(t.report_card_score) || 0), 0) / Math.max(teams.length, 1);
+    const avgScore = scored.length ? scored.reduce((sum, t) => sum + t.report_card_score, 0) / scored.length : null;
 
     return `
       <div class="section-header">
@@ -215,13 +219,13 @@
           ${teams.map(t => `<option value="${escapeHtml(t.car_no)}">${escapeHtml(teamOptionLabel(t))}</option>`).join('')}
         </select>
       </div>
-      <div class="notice"><strong>Interpretation note.</strong> RaceIQ scores and grades are explanatory storytelling aids, not official race rankings. First-observed movement is separate from true Grid → Finish movement because capture started after the race began. Caveats remain visible where anomalies or known incidents affect interpretation.</div>
+      <div class="notice"><strong>Interpretation note.</strong> RaceIQ scores and grades are withheld because timing anomalies affect their shared inputs; they are not official race rankings. First-observed movement is separate from true Grid → Finish movement because capture started after the race began. Caveats remain visible where anomalies or known incidents affect interpretation.</div>
       <div class="kpi-row">
-        ${kpi('Highest RaceIQ', bestScore ? `${bestScore.team_name} ${fmt(bestScore.report_card_score, 1)}` : '—', 'explanatory score')}
-        ${kpi('Winner', winner ? winner.team_name : '—', winner ? `Grade ${winner.report_card_grade || '—'}` : '')}
+        ${kpi('Highest RaceIQ', bestScore ? `${bestScore.team_name} ${fmt(bestScore.report_card_score, 1)}` : 'Not verified', 'explanatory score')}
+        ${kpi('Winner', winner ? winner.team_name : '—', winner ? (winner.report_card_grade ? `Grade ${winner.report_card_grade}` : 'RaceIQ grade not verified') : '')}
         ${kpi('Best grid recovery', bestRecovery ? `${bestRecovery.team_name} ${signed(bestRecovery.places_gained)}` : '—')}
         ${kpi('Cards', teams.length)}
-        ${kpi('Average score', fmt(avgScore, 1), 'not an official metric')}
+        ${kpi('Average score', avgScore === null ? 'Not verified' : fmt(avgScore, 1), 'not an official metric')}
         ${kpi('With caveats', caveatedTeams)}
       </div>
       <div class="grid cols-3 team-report-grid">
@@ -233,7 +237,7 @@
           <h3>${escapeHtml(t.team_name)}</h3>
           <p>${escapeHtml(t.headline || '')}</p>
           <div class="controls">
-            ${badge(`Score ${fmt(t.report_card_score, 1)}`, scoreClass(t.report_card_score))}
+            ${badge(`Score ${t.report_card_score === null ? "Not verified" : fmt(t.report_card_score, 1)}`, scoreClass(t.report_card_score))}
             ${badge(`Grid ${signed(t.places_gained)}`, movementClass(t.places_gained) === 'up' ? 'good' : movementClass(t.places_gained) === 'down' ? 'bad' : '')}
           </div>
         </button>`).join('')}
@@ -249,7 +253,9 @@
     const detail = $('teamReportDetail');
     if (!select || !detail || !teams.length) return;
 
-    const bestScore = teams.slice().sort((a,b)=>Number(b.report_card_score || 0)-Number(a.report_card_score || 0))[0];
+    const scored = teams.filter(t => typeof t.report_card_score === 'number' && Number.isFinite(t.report_card_score));
+
+    const bestScore = scored.slice().sort((a,b)=>b.report_card_score-a.report_card_score)[0];
     const initial = bestScore || teams.find(t => Number(t.final_position) === 1) || teams[0];
 
     const render = (carNo) => {
