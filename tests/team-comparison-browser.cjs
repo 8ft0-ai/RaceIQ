@@ -32,7 +32,7 @@ const assert = require('node:assert/strict');
     await page.getByRole('button', { name: 'Compare teams' }).click();
     assert.equal(await page.locator('#comparisonA').inputValue(), '5');
     assert.equal(await page.locator('#comparisonB').inputValue(), '58');
-    assert.equal(await page.locator('#comparisonB option[value="5"]').isDisabled(), true);
+    assert.equal(await page.locator('#comparisonB option[value="5"]').evaluate(option => option.disabled), true);
     await page.goto(base + '?teamA=not-a-team&teamB=not-a-team', { waitUntil: 'networkidle' });
     await page.getByRole('button', { name: 'Compare teams' }).click();
     assert.notEqual(await page.locator('#comparisonA').inputValue(), await page.locator('#comparisonB').inputValue());
