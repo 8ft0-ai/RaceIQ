@@ -28,7 +28,7 @@ const assert = require('node:assert/strict');
     assert.equal(await page.locator('#comparisonB').inputValue(), '58');
     assert.match(await pace.innerText(), /178\.7/);
     assert.doesNotMatch(await pace.innerText(), /Unavailable/);
-    assert.match(await pace.innerText(), /\\+9\\.6/); // A minus B in laps/hour
+    assert.ok((await pace.innerText()).includes('+9.6 laps/hour')); // A minus B
     await page.reload({ waitUntil: 'networkidle' });
     await page.getByRole('button', { name: 'Compare teams' }).click();
     assert.equal(await page.locator('#comparisonA').inputValue(), '5');
