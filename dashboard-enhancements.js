@@ -31,6 +31,11 @@
       scripts: ['team-metric-parity.js', 'pace-profile-ties.js']
     },
     {
+      area: 'Team comparison',
+      reason: 'Independent, fail-closed side-by-side comparison of prepared team data.',
+      scripts: ['team-comparison.js']
+    },
+    {
       area: 'Report Cards renderer',
       reason: 'Report Cards rendering remains separate from app.js but is loaded through the same explicit dashboard plan.',
       scripts: ['report-cards.js']
