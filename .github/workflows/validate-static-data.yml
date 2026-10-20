@@ -48,3 +48,24 @@ jobs:
 
       - name: Verify prepared JSON remains deterministic
         run: git diff --exit-code -- data/
+
+      - name: JavaScript syntax checks
+        run: |
+          node --check app.js
+          node --check report-cards.js
+          node --check dashboard-enhancements.js
+          node --check team-comparison.js
+          node --check tests/team-comparison-browser.cjs
+
+      - name: Install test-only Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+
+      - name: Real browser comparison and regression acceptance
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 > /tmp/raceiq-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          sleep 2
+          node tests/team-comparison-browser.cjs
